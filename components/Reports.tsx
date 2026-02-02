@@ -32,12 +32,6 @@ const Reports: React.FC<ReportsProps> = ({ orders }) => {
   const [orderType, setOrderType] = useState('All');
   const [orderStatus, setOrderStatus] = useState('All');
 
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [paymentMode, setPaymentMode] = useState('All');
-  const [orderType, setOrderType] = useState('All');
-  const [orderStatus, setOrderStatus] = useState('All');
-
   // Filtered orders based on all filters
   const filteredOrders = useMemo(() => {
     return orders.filter(order => {
