@@ -78,10 +78,7 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('drona_menu_items');
     return saved ? JSON.parse(saved) : INITIAL_MENU_ITEMS;
   });
-  const [orders, setOrders] = useState<Order[]>(() => {
-    const saved = localStorage.getItem('drona_orders');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [orders, setOrders] = useState<Order[]>([]);  // Orders are stored in Firebase only
   const [tables, setTables] = useState<Table[]>(() => {
     const saved = localStorage.getItem('drona_tables');
     return saved ? JSON.parse(saved) : [
@@ -193,7 +190,7 @@ const App: React.FC = () => {
       }
     });
 
-    // Orders Sync
+    // Orders Sync - Firebase is the single source of truth
     const ordersRef = ref(db, 'orders');
     const unsubscribeOrders = onValue(ordersRef, (snapshot) => {
       const data = snapshot.val();
@@ -201,11 +198,9 @@ const App: React.FC = () => {
         const orderArray = Object.values(data) as Order[];
         const sortedOrders = orderArray.sort((a, b) => new Date(b.date + ' ' + b.time).getTime() - new Date(a.date + ' ' + a.time).getTime());
         setOrders(sortedOrders);
-        localStorage.setItem('drona_orders', JSON.stringify(sortedOrders));
       } else {
-        // No orders in Firebase, use local storage or empty array
-        const saved = localStorage.getItem('drona_orders');
-        setOrders(saved ? JSON.parse(saved) : []);
+        // No orders in Firebase
+        setOrders([]);
       }
       setIsDataLoaded(true);
     });
@@ -260,42 +255,32 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Action Handlers with Cloud Sync
+  // Action Handlers - Firebase is the single source of truth for orders
   const handleCreateOrder = async (order: Order) => {
-    // 1. Local Update
-    const updatedOrders = [order, ...orders];
-    setOrders(updatedOrders);
-    localStorage.setItem('drona_orders', JSON.stringify(updatedOrders));
-
-    // 2. Firebase Push
     try {
+      // Save directly to Firebase - the onValue listener will update local state
       await set(ref(db, `orders/${order.id}`), order);
     } catch (error) {
-      console.error("Firebase Sync Error (Order):", error);
+      console.error("Firebase Error (Create Order):", error);
+      // Optionally show user an error notification
     }
   };
 
   const handleUpdateOrderStatus = async (orderId: string, status: OrderStatus) => {
-    const updatedOrders = orders.map(o => o.id === orderId ? { ...o, status } : o);
-    setOrders(updatedOrders);
-    localStorage.setItem('drona_orders', JSON.stringify(updatedOrders));
-
     try {
+      // Update Firebase directly - the onValue listener will update local state
       await update(ref(db, `orders/${orderId}`), { status });
     } catch (error) {
-      console.error("Firebase Sync Error (Status):", error);
+      console.error("Firebase Error (Update Status):", error);
     }
   };
 
   const handleDeleteOrder = async (orderId: string) => {
-    const updatedOrders = orders.filter(o => o.id !== orderId);
-    setOrders(updatedOrders);
-    localStorage.setItem('drona_orders', JSON.stringify(updatedOrders));
-
     try {
+      // Delete from Firebase directly - the onValue listener will update local state
       await set(ref(db, `orders/${orderId}`), null);
     } catch (error) {
-      console.error("Firebase Sync Error (Delete Order):", error);
+      console.error("Firebase Error (Delete Order):", error);
     }
   };
 
