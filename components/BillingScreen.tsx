@@ -29,8 +29,10 @@ interface BillingScreenProps {
   taxRate: number;
   restaurantInfo: RestaurantInfo;
   tables: Table[];
+  tableCarts: Record<string, TableCart>;
   onCreateOrder: (order: Order) => void;
   onUpdateTableStatus: (tableId: string, status: Table['status'], currentOrderId?: string) => void;
+  onUpdateTableCarts: (tableCarts: Record<string, TableCart>) => void;
 }
 
 const BillingScreen: React.FC<BillingScreenProps> = ({ 
@@ -39,20 +41,29 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
   taxRate, 
   restaurantInfo, 
   tables,
+  tableCarts,
   onCreateOrder,
-  onUpdateTableStatus
+  onUpdateTableStatus,
+  onUpdateTableCarts
 }) => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(categories[0]?.id || '');
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [orderType, setOrderType] = useState<OrderType>('DINE_IN');
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
   
-  // Table-based cart storage
-  const [tableCarts, setTableCarts] = useState<Record<string, TableCart>>({});
-  
   // Get current cart based on selected table or default cart for non-dine-in
   const [defaultCart, setDefaultCart] = useState<CartItem[]>([]);
   const [defaultCustomerName, setDefaultCustomerName] = useState('');
+
+  // Helper to update table carts
+  const updateTableCart = (tableId: string, updater: (current: TableCart) => TableCart) => {
+    const currentCart = tableCarts[tableId] || { items: [], customerName: '' };
+    const updated = updater(currentCart);
+    onUpdateTableCarts({
+      ...tableCarts,
+      [tableId]: updated
+    });
+  };
 
   const currentCart = useMemo(() => {
     if (orderType === 'DINE_IN' && selectedTableId) {
@@ -70,13 +81,9 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
 
   const setCustomerName = (name: string) => {
     if (orderType === 'DINE_IN' && selectedTableId) {
-      setTableCarts(prev => ({
-        ...prev,
-        [selectedTableId]: {
-          ...prev[selectedTableId],
-          customerName: name,
-          items: prev[selectedTableId]?.items || []
-        }
+      updateTableCart(selectedTableId, (cart) => ({
+        ...cart,
+        customerName: name
       }));
     } else {
       setDefaultCustomerName(name);
@@ -89,28 +96,20 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
 
   const addToCart = (item: MenuItem) => {
     if (orderType === 'DINE_IN' && selectedTableId) {
-      setTableCarts(prev => {
-        const currentItems = prev[selectedTableId]?.items || [];
-        const existing = currentItems.find(i => i.id === item.id);
-        
-        if (existing) {
-          return {
-            ...prev,
-            [selectedTableId]: {
-              ...prev[selectedTableId],
-              items: currentItems.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i),
-              customerName: prev[selectedTableId]?.customerName || ''
-            }
-          };
-        }
-        return {
-          ...prev,
-          [selectedTableId]: {
-            items: [...currentItems, { ...item, quantity: 1 }],
-            customerName: prev[selectedTableId]?.customerName || ''
-          }
-        };
-      });
+      const currentItems = tableCarts[selectedTableId]?.items || [];
+      const existing = currentItems.find(i => i.id === item.id);
+      
+      if (existing) {
+        updateTableCart(selectedTableId, (cart) => ({
+          ...cart,
+          items: cart.items.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i)
+        }));
+      } else {
+        updateTableCart(selectedTableId, (cart) => ({
+          ...cart,
+          items: [...cart.items, { ...item, quantity: 1 }]
+        }));
+      }
       
       // Mark table as occupied when items are added
       const table = tables.find(t => t.id === selectedTableId);
@@ -130,25 +129,24 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
 
   const updateQuantity = (id: string, delta: number) => {
     if (orderType === 'DINE_IN' && selectedTableId) {
-      setTableCarts(prev => {
-        const currentItems = prev[selectedTableId]?.items || [];
-        const updatedItems = currentItems.map(item => {
-          if (item.id === id) {
-            const newQty = Math.max(0, item.quantity + delta);
-            return { ...item, quantity: newQty };
-          }
-          return item;
-        }).filter(item => item.quantity > 0);
-        
-        return {
-          ...prev,
-          [selectedTableId]: {
-            ...prev[selectedTableId],
-            items: updatedItems,
-            customerName: prev[selectedTableId]?.customerName || ''
-          }
-        };
-      });
+      const currentItems = tableCarts[selectedTableId]?.items || [];
+      const updatedItems = currentItems.map(item => {
+        if (item.id === id) {
+          const newQty = Math.max(0, item.quantity + delta);
+          return { ...item, quantity: newQty };
+        }
+        return item;
+      }).filter(item => item.quantity > 0);
+      
+      // If cart is now empty, reset table status to AVAILABLE
+      if (updatedItems.length === 0) {
+        onUpdateTableStatus(selectedTableId, 'AVAILABLE');
+      }
+      
+      updateTableCart(selectedTableId, (cart) => ({
+        ...cart,
+        items: updatedItems
+      }));
     } else {
       setDefaultCart(prev => prev.map(item => {
         if (item.id === id) {
@@ -162,13 +160,17 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
 
   const removeFromCart = (id: string) => {
     if (orderType === 'DINE_IN' && selectedTableId) {
-      setTableCarts(prev => ({
-        ...prev,
-        [selectedTableId]: {
-          ...prev[selectedTableId],
-          items: (prev[selectedTableId]?.items || []).filter(item => item.id !== id),
-          customerName: prev[selectedTableId]?.customerName || ''
-        }
+      const currentItems = tableCarts[selectedTableId]?.items || [];
+      const updatedItems = currentItems.filter(item => item.id !== id);
+      
+      // If cart is now empty, reset table status to AVAILABLE
+      if (updatedItems.length === 0) {
+        onUpdateTableStatus(selectedTableId, 'AVAILABLE');
+      }
+      
+      updateTableCart(selectedTableId, (cart) => ({
+        ...cart,
+        items: updatedItems
       }));
     } else {
       setDefaultCart(prev => prev.filter(item => item.id !== id));
@@ -288,11 +290,9 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
     
     // Clear the cart for the table and make table available
     if (orderType === 'DINE_IN' && selectedTableId) {
-      setTableCarts(prev => {
-        const updated = { ...prev };
-        delete updated[selectedTableId];
-        return updated;
-      });
+      const updatedCarts = { ...tableCarts };
+      delete updatedCarts[selectedTableId];
+      onUpdateTableCarts(updatedCarts);
       onUpdateTableStatus(selectedTableId, 'AVAILABLE');
       setSelectedTableId(null);
     } else {
@@ -300,7 +300,6 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
       setDefaultCustomerName('');
     }
   };
-
   // Get table item count for badges
   const getTableItemCount = (tableId: string) => {
     return tableCarts[tableId]?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
