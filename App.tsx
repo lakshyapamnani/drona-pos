@@ -257,12 +257,18 @@ const App: React.FC = () => {
 
   // Action Handlers - Firebase is the single source of truth for orders
   const handleCreateOrder = async (order: Order) => {
+    console.log("Creating order:", order);
+    
+    // Clean the order object - remove undefined values (Firebase doesn't accept undefined)
+    const cleanOrder = JSON.parse(JSON.stringify(order));
+    
     try {
       // Save directly to Firebase - the onValue listener will update local state
-      await set(ref(db, `orders/${order.id}`), order);
+      await set(ref(db, `orders/${order.id}`), cleanOrder);
+      console.log("Order saved to Firebase successfully:", order.id);
     } catch (error) {
       console.error("Firebase Error (Create Order):", error);
-      // Optionally show user an error notification
+      alert("Failed to save order. Please check your internet connection.");
     }
   };
 
