@@ -1,6 +1,15 @@
 export type OrderType = 'DINE_IN' | 'DELIVERY' | 'PICK_UP';
 export type OrderStatus = 'PLACED' | 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED';
 export type PaymentMode = 'CASH' | 'CARD' | 'UPI' | 'DUE' | 'PART';
+export type TableStatus = 'AVAILABLE' | 'OCCUPIED' | 'RESERVED';
+
+export interface Table {
+  id: string;
+  name: string;
+  status: TableStatus;
+  currentOrderId?: string;
+  capacity?: number;
+}
 
 export interface RestaurantInfo {
   name: string;
@@ -30,6 +39,8 @@ export interface Order {
   id: string;
   billNo: string;
   customerName?: string;
+  tableId?: string;
+  tableName?: string;
   date: string;
   time: string;
   items: CartItem[];

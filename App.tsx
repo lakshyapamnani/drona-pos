@@ -25,7 +25,8 @@ import {
   Category, 
   Order, 
   OrderStatus, 
-  RestaurantInfo
+  RestaurantInfo,
+  Table
 } from './types';
 import { 
   INITIAL_CATEGORIES, 
@@ -69,6 +70,17 @@ const App: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>(() => {
     const saved = localStorage.getItem('drona_orders');
     return saved ? JSON.parse(saved) : [];
+  });
+  const [tables, setTables] = useState<Table[]>(() => {
+    const saved = localStorage.getItem('drona_tables');
+    return saved ? JSON.parse(saved) : [
+      { id: 't1', name: 'T-1', status: 'AVAILABLE' },
+      { id: 't2', name: 'T-2', status: 'AVAILABLE' },
+      { id: 't3', name: 'T-3', status: 'AVAILABLE' },
+      { id: 't4', name: 'T-4', status: 'AVAILABLE' },
+      { id: 't5', name: 'T-5', status: 'AVAILABLE' },
+      { id: 't6', name: 'T-6', status: 'AVAILABLE' },
+    ];
   });
   const [taxRate, setTaxRate] = useState(() => {
     const saved = localStorage.getItem('drona_tax_rate');
@@ -147,11 +159,23 @@ const App: React.FC = () => {
       }
     });
 
+    // Tables Sync
+    const tablesRef = ref(db, 'tables');
+    const unsubscribeTables = onValue(tablesRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const tableArray = Object.values(data) as Table[];
+        setTables(tableArray);
+        localStorage.setItem('drona_tables', JSON.stringify(tableArray));
+      }
+    });
+
     return () => {
       unsubscribeCats();
       unsubscribeMenu();
       unsubscribeOrders();
       unsubscribeSettings();
+      unsubscribeTables();
     };
   }, []);
 
@@ -191,6 +215,48 @@ const App: React.FC = () => {
       await set(ref(db, `orders/${orderId}`), null);
     } catch (error) {
       console.error("Firebase Sync Error (Delete Order):", error);
+    }
+  };
+
+  // Table Handlers
+  const handleAddTable = async (tableName: string) => {
+    const newId = Math.random().toString(36).substr(2, 9);
+    const newTable: Table = { id: newId, name: tableName, status: 'AVAILABLE' };
+    
+    const updatedTables = [...tables, newTable];
+    setTables(updatedTables);
+    localStorage.setItem('drona_tables', JSON.stringify(updatedTables));
+
+    try {
+      await set(ref(db, `tables/${newId}`), newTable);
+    } catch (error) {
+      console.error("Firebase Sync Error (Add Table):", error);
+    }
+  };
+
+  const handleDeleteTable = async (tableId: string) => {
+    const updatedTables = tables.filter(t => t.id !== tableId);
+    setTables(updatedTables);
+    localStorage.setItem('drona_tables', JSON.stringify(updatedTables));
+
+    try {
+      await set(ref(db, `tables/${tableId}`), null);
+    } catch (error) {
+      console.error("Firebase Sync Error (Delete Table):", error);
+    }
+  };
+
+  const handleUpdateTableStatus = async (tableId: string, status: Table['status'], currentOrderId?: string) => {
+    const updatedTables = tables.map(t => 
+      t.id === tableId ? { ...t, status, currentOrderId } : t
+    );
+    setTables(updatedTables);
+    localStorage.setItem('drona_tables', JSON.stringify(updatedTables));
+
+    try {
+      await update(ref(db, `tables/${tableId}`), { status, currentOrderId: currentOrderId || null });
+    } catch (error) {
+      console.error("Firebase Sync Error (Update Table):", error);
     }
   };
 
@@ -278,7 +344,9 @@ const App: React.FC = () => {
             menuItems={menuItems} 
             taxRate={taxRate}
             restaurantInfo={restaurantInfo}
-            onCreateOrder={handleCreateOrder} 
+            tables={tables}
+            onCreateOrder={handleCreateOrder}
+            onUpdateTableStatus={handleUpdateTableStatus}
           />
         );
       case 'DASHBOARD':
@@ -336,6 +404,7 @@ const App: React.FC = () => {
             menuItems={menuItems}
             taxRate={taxRate}
             restaurantInfo={restaurantInfo}
+            tables={tables}
             setTaxRate={handleSaveTaxRate}
             setRestaurantInfo={handleSaveRestaurantInfo}
             onAddMenuItem={handleAddMenuItem}
@@ -344,10 +413,12 @@ const App: React.FC = () => {
             onAddCategory={handleAddCategory}
             onUpdateCategory={handleUpdateCategory}
             onDeleteCategory={handleDeleteCategory}
+            onAddTable={handleAddTable}
+            onDeleteTable={handleDeleteTable}
           />
         );
       default:
-        return <BillingScreen categories={categories} menuItems={menuItems} taxRate={taxRate} restaurantInfo={restaurantInfo} onCreateOrder={handleCreateOrder} />;
+        return <BillingScreen categories={categories} menuItems={menuItems} taxRate={taxRate} restaurantInfo={restaurantInfo} tables={tables} onCreateOrder={handleCreateOrder} onUpdateTableStatus={handleUpdateTableStatus} />;
     }
   };
 

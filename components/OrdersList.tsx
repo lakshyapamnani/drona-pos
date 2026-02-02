@@ -241,13 +241,20 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                   <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter border ${
-                     order.orderType === 'DINE_IN' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                     order.orderType === 'DELIVERY' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                     'bg-gray-50 text-gray-700 border-gray-200'
-                   }`}>
-                     {order.orderType.replace('_', ' ')}
-                   </span>
+                   <div className="flex flex-col gap-1">
+                     <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter border w-fit ${
+                       order.orderType === 'DINE_IN' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                       order.orderType === 'DELIVERY' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                       'bg-gray-50 text-gray-700 border-gray-200'
+                     }`}>
+                       {order.orderType.replace('_', ' ')}
+                     </span>
+                     {order.orderType === 'DINE_IN' && order.tableName && (
+                       <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter border w-fit bg-purple-50 text-purple-700 border-purple-200">
+                         {order.tableName}
+                       </span>
+                     )}
+                   </div>
                 </td>
                 <td className="px-6 py-4 font-black text-gray-900">₹{order.total.toFixed(0)}</td>
                 <td className="px-6 py-4">
