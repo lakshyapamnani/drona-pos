@@ -6,6 +6,7 @@ import { getStorage } from "firebase/storage";
 const firebaseConfig = {
   apiKey: "AIzaSyBhKZFbLGq8MVmg_Ln0N4SoG6NUq_eZtk0",
   authDomain: "livin-healthy.firebaseapp.com",
+  databaseURL: "https://livin-healthy-default-rtdb.firebaseio.com",
   projectId: "livin-healthy",
   storageBucket: "livin-healthy.firebasestorage.app",
   messagingSenderId: "802846930621",
