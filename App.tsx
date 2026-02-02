@@ -62,7 +62,10 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   // Check if URL path is /mobile for dedicated mobile view
-  const [isMobileRoute, setIsMobileRoute] = useState(() => window.location.pathname === '/mobile');
+  const [isMobileRoute, setIsMobileRoute] = useState(() => {
+    const path = window.location.pathname.toLowerCase();
+    return path === '/mobile' || path === '/mobile/' || path.startsWith('/mobile');
+  });
   const [mobileTab, setMobileTab] = useState<'analytics' | 'orders' | 'bills' | 'reports'>('analytics');
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   
@@ -111,7 +114,16 @@ const App: React.FC = () => {
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-    const handlePopState = () => setIsMobileRoute(window.location.pathname === '/mobile');
+    const handlePopState = () => {
+      const path = window.location.pathname.toLowerCase();
+      setIsMobileRoute(path === '/mobile' || path === '/mobile/' || path.startsWith('/mobile'));
+    };
+    
+    // Check on mount as well
+    const path = window.location.pathname.toLowerCase();
+    if (path === '/mobile' || path === '/mobile/' || path.startsWith('/mobile')) {
+      setIsMobileRoute(true);
+    }
     
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
