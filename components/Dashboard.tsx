@@ -76,20 +76,20 @@ const Dashboard: React.FC<DashboardProps> = ({ orders }) => {
   const PIE_COLORS = [COLORS.primary, '#262626', '#4b5563', '#9ca3af', '#d1d5db'];
 
   return (
-    <div className="h-full overflow-y-auto custom-scrollbar bg-gray-50 p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="h-full overflow-y-auto custom-scrollbar bg-gray-50 p-4 md:p-6 space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">DRONA POS Analytics</h1>
-          <p className="text-sm text-gray-500">Real-time performance metrics for your cafe</p>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-800">Analytics Dashboard</h1>
+          <p className="text-xs md:text-sm text-gray-500">Real-time performance metrics</p>
         </div>
-        <div className="bg-white px-4 py-2 rounded-xl shadow-sm border text-sm font-bold text-gray-600 flex items-center gap-2">
-          <Clock size={16} className="text-[#F57C00]" />
+        <div className="bg-white px-3 py-1.5 rounded-xl shadow-sm border text-xs font-bold text-gray-600 flex items-center gap-2 self-start sm:self-auto">
+          <Clock size={14} className="text-[#F57C00]" />
           Last Sync: {new Date().toLocaleTimeString()}
         </div>
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         <StatCard 
           label="Today's Sales" 
           value={`₹${stats.todaySales.toLocaleString()}`} 
@@ -118,13 +118,13 @@ const Dashboard: React.FC<DashboardProps> = ({ orders }) => {
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white p-6 rounded-3xl shadow-sm border">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-bold text-gray-800">Hourly Sales (Today)</h3>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Revenue (₹)</span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+        <div className="lg:col-span-2 bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border">
+          <div className="flex items-center justify-between mb-4 md:mb-8">
+            <h3 className="text-sm md:text-lg font-bold text-gray-800">Hourly Sales (Today)</h3>
+            <span className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-widest">Revenue (₹)</span>
           </div>
-          <div className="h-[320px]">
+          <div className="h-[200px] md:h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stats.hourlySalesData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
@@ -132,19 +132,21 @@ const Dashboard: React.FC<DashboardProps> = ({ orders }) => {
                   dataKey="hour" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{fill: '#9ca3af', fontSize: 10, fontWeight: 600}} 
+                  tick={{fill: '#9ca3af', fontSize: 8, fontWeight: 600}} 
+                  interval={1}
                 />
                 <YAxis 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{fill: '#9ca3af', fontSize: 10, fontWeight: 600}}
-                  tickFormatter={(val) => `₹${val}`} 
+                  tick={{fill: '#9ca3af', fontSize: 8, fontWeight: 600}}
+                  tickFormatter={(val) => `₹${val}`}
+                  width={40}
                 />
                 <Tooltip 
                   cursor={{fill: '#fff7ed'}} 
-                  contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold'}} 
+                  contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold', fontSize: '12px'}} 
                 />
-                <Bar dataKey="sales" fill={COLORS.primary} radius={[6, 6, 0, 0]} barSize={30} />
+                <Bar dataKey="sales" fill={COLORS.primary} radius={[4, 4, 0, 0]} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -241,15 +243,15 @@ const Dashboard: React.FC<DashboardProps> = ({ orders }) => {
 };
 
 const StatCard: React.FC<{ label: string; value: string; icon: React.ReactNode; color: string; trend?: string }> = ({ label, value, icon, color, trend }) => (
-  <div className="bg-white p-6 rounded-3xl shadow-sm border-2 border-transparent hover:border-orange-100 hover:shadow-xl transition-all group">
-    <div className="flex items-center gap-5">
-      <div className={`p-4 rounded-2xl ${color} transition-transform group-hover:scale-110`}>
-        {icon}
+  <div className="bg-white p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border-2 border-transparent hover:border-orange-100 hover:shadow-xl transition-all group">
+    <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-5">
+      <div className={`p-2 md:p-4 rounded-xl md:rounded-2xl ${color} transition-transform group-hover:scale-110 self-start`}>
+        {React.cloneElement(icon as React.ReactElement, { size: 20, className: (icon as React.ReactElement).props.className })}
       </div>
       <div>
-        <p className="text-xs text-gray-400 font-black uppercase tracking-widest mb-1">{label}</p>
-        <h2 className="text-2xl font-black text-gray-800 tracking-tight">{value}</h2>
-        {trend && <p className="text-[10px] text-green-600 mt-1 font-black uppercase tracking-tighter">{trend}</p>}
+        <p className="text-[10px] md:text-xs text-gray-400 font-black uppercase tracking-widest mb-0.5 md:mb-1">{label}</p>
+        <h2 className="text-lg md:text-2xl font-black text-gray-800 tracking-tight">{value}</h2>
+        {trend && <p className="text-[10px] text-green-600 mt-0.5 md:mt-1 font-black uppercase tracking-tighter">{trend}</p>}
       </div>
     </div>
   </div>

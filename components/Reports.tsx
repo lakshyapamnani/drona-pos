@@ -288,62 +288,62 @@ const Reports: React.FC<ReportsProps> = ({ orders }) => {
 
   return (
     <div className="h-full bg-gray-50 overflow-y-auto custom-scrollbar">
-      <div className="p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col gap-3">
           <div>
-            <h1 className="text-2xl font-black text-gray-900 tracking-tight">Business Reports & Analytics</h1>
-            <p className="text-sm text-gray-600 font-medium mt-1">Comprehensive insights and performance metrics</p>
+            <h1 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">Reports & Analytics</h1>
+            <p className="text-xs md:text-sm text-gray-600 font-medium mt-0.5">Insights and performance metrics</p>
           </div>
           <div className="flex gap-2">
             <button 
               onClick={exportToExcel}
               disabled={filteredOrders.length === 0}
-              className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-xl font-black hover:bg-green-700 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 md:flex-none flex items-center justify-center gap-1 md:gap-2 bg-green-600 text-white px-3 md:px-4 py-2 rounded-xl text-xs md:text-sm font-black hover:bg-green-700 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <FileSpreadsheet size={18} /> Export CSV
+              <FileSpreadsheet size={16} /> <span className="hidden sm:inline">Export</span> CSV
             </button>
             <button 
               onClick={exportToPDF}
               disabled={filteredOrders.length === 0}
-              className="flex items-center gap-2 bg-[#F57C00] text-white px-4 py-2 rounded-xl font-black hover:bg-orange-600 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 md:flex-none flex items-center justify-center gap-1 md:gap-2 bg-[#F57C00] text-white px-3 md:px-4 py-2 rounded-xl text-xs md:text-sm font-black hover:bg-orange-600 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <FileText size={18} /> Print PDF
+              <FileText size={16} /> <span className="hidden sm:inline">Print</span> PDF
             </button>
           </div>
         </div>
 
         {/* Filters Section */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Filter size={20} className="text-[#F57C00]" />
-            <h2 className="text-lg font-black text-gray-900">Filters</h2>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-6">
+          <div className="flex items-center gap-2 mb-3 md:mb-4">
+            <Filter size={18} className="text-[#F57C00]" />
+            <h2 className="text-sm md:text-lg font-black text-gray-900">Filters</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-3 md:gap-4">
             <div className="space-y-1">
-              <label className="text-xs font-black text-gray-700 uppercase tracking-wider">Start Date</label>
+              <label className="text-[10px] md:text-xs font-black text-gray-700 uppercase tracking-wider">Start Date</label>
               <input 
                 type="date" 
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 font-semibold focus:ring-2 focus:ring-orange-500 outline-none"
+                className="w-full px-2 md:px-3 py-2 bg-white border border-gray-300 rounded-lg text-xs md:text-sm text-gray-900 font-semibold focus:ring-2 focus:ring-orange-500 outline-none"
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-black text-gray-700 uppercase tracking-wider">End Date</label>
+              <label className="text-[10px] md:text-xs font-black text-gray-700 uppercase tracking-wider">End Date</label>
               <input 
                 type="date" 
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 font-semibold focus:ring-2 focus:ring-orange-500 outline-none"
+                className="w-full px-2 md:px-3 py-2 bg-white border border-gray-300 rounded-lg text-xs md:text-sm text-gray-900 font-semibold focus:ring-2 focus:ring-orange-500 outline-none"
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-black text-gray-700 uppercase tracking-wider">Payment Mode</label>
+              <label className="text-[10px] md:text-xs font-black text-gray-700 uppercase tracking-wider">Payment Mode</label>
               <select 
                 value={paymentMode}
                 onChange={(e) => setPaymentMode(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 font-semibold focus:ring-2 focus:ring-orange-500 outline-none cursor-pointer"
+                className="w-full px-2 md:px-3 py-2 bg-white border border-gray-300 rounded-lg text-xs md:text-sm text-gray-900 font-semibold focus:ring-2 focus:ring-orange-500 outline-none cursor-pointer"
               >
                 <option>All</option>
                 <option>CASH</option>
@@ -378,63 +378,63 @@ const Reports: React.FC<ReportsProps> = ({ orders }) => {
                 <option>PREPARING</option>
               </select>
             </div>
-            <div className="flex items-end">
+            <div className="flex items-end col-span-2 md:col-span-1">
               <button 
                 onClick={clearFilters}
-                className="w-full flex items-center justify-center gap-2 bg-gray-600 text-white py-2 rounded-lg font-black hover:bg-gray-700 transition-all active:scale-95 text-sm"
+                className="w-full flex items-center justify-center gap-2 bg-gray-600 text-white py-2 rounded-lg font-black hover:bg-gray-700 transition-all active:scale-95 text-xs md:text-sm"
               >
-                <X size={16} /> Clear
+                <X size={14} /> Clear
               </button>
             </div>
           </div>
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <StatCard 
-            icon={<DollarSign size={24} />}
+            icon={<DollarSign size={20} />}
             label="Total Revenue"
-            value={`₹${analytics.totalRevenue.toFixed(2)}`}
+            value={`₹${analytics.totalRevenue.toFixed(0)}`}
             subValue={`${analytics.totalOrders} orders`}
             color="orange"
           />
           <StatCard 
-            icon={<ShoppingCart size={24} />}
-            label="Average Order Value"
-            value={`₹${analytics.avgOrderValue.toFixed(2)}`}
-            subValue={`Per transaction`}
+            icon={<ShoppingCart size={20} />}
+            label="Avg Order Value"
+            value={`₹${analytics.avgOrderValue.toFixed(0)}`}
+            subValue={`Per order`}
             color="blue"
           />
           <StatCard 
-            icon={<CheckCircle size={24} />}
-            label="Completed Orders"
+            icon={<CheckCircle size={20} />}
+            label="Completed"
             value={analytics.completedOrders.toString()}
-            subValue={`${((analytics.completedOrders / analytics.totalOrders) * 100 || 0).toFixed(1)}% success rate`}
+            subValue={`${((analytics.completedOrders / analytics.totalOrders) * 100 || 0).toFixed(0)}% rate`}
             color="green"
           />
           <StatCard 
-            icon={<Package size={24} />}
-            label="Total Tax Collected"
-            value={`₹${analytics.totalTax.toFixed(2)}`}
-            subValue={`GST amount`}
+            icon={<Package size={20} />}
+            label="Tax Collected"
+            value={`₹${analytics.totalTax.toFixed(0)}`}
+            subValue={`GST`}
             color="purple"
           />
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           {/* Daily Sales Chart */}
           {analytics.dailyData && analytics.dailyData.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-black text-gray-900 mb-4">Daily Sales Trend</h3>
-              <div style={{ width: '100%', height: 300 }}>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-6">
+              <h3 className="text-sm md:text-lg font-black text-gray-900 mb-3 md:mb-4">Daily Sales Trend</h3>
+              <div style={{ width: '100%', height: 220 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={analytics.dailyData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="total" stroke="#F57C00" strokeWidth={3} dot={{ fill: '#F57C00', r: 4 }} />
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} width={35} />
+                    <Tooltip contentStyle={{ fontSize: 12 }} />
+                    <Line type="monotone" dataKey="total" stroke="#F57C00" strokeWidth={2} dot={{ fill: '#F57C00', r: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -443,9 +443,9 @@ const Reports: React.FC<ReportsProps> = ({ orders }) => {
 
           {/* Payment Mode Distribution */}
           {paymentData && paymentData.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-black text-gray-900 mb-4">Payment Mode Revenue</h3>
-              <div style={{ width: '100%', height: 300 }}>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-6">
+              <h3 className="text-sm md:text-lg font-black text-gray-900 mb-3 md:mb-4">Payment Mode Revenue</h3>
+              <div style={{ width: '100%', height: 220 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -593,15 +593,15 @@ const StatCard: React.FC<{
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between mb-3">
-        <div className={`p-3 rounded-xl ${colorClasses[color]}`}>
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-3 md:p-6 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between mb-2 md:mb-3">
+        <div className={`p-2 md:p-3 rounded-xl ${colorClasses[color]}`}>
           {icon}
         </div>
       </div>
-      <p className="text-sm font-bold text-gray-600 uppercase tracking-wider mb-1">{label}</p>
-      <p className="text-2xl font-black text-gray-900 mb-1">{value}</p>
-      <p className="text-xs text-gray-500 font-semibold">{subValue}</p>
+      <p className="text-[10px] md:text-sm font-bold text-gray-600 uppercase tracking-wider mb-0.5 md:mb-1">{label}</p>
+      <p className="text-lg md:text-2xl font-black text-gray-900 mb-0.5 md:mb-1">{value}</p>
+      <p className="text-[10px] md:text-xs text-gray-500 font-semibold">{subValue}</p>
     </div>
   );
 };

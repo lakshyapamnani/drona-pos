@@ -319,29 +319,29 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
   return (
     <div className="h-full bg-gray-50 flex flex-col overflow-hidden">
       {/* Dynamic Header */}
-      <div className="p-6 pb-2 shrink-0 flex items-center justify-between">
+      <div className="p-4 md:p-6 pb-2 shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black text-gray-900 tracking-tight">{title}</h1>
-          <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">
-            {isAllBillsView ? 'Comprehensive Transaction History' : 'Status-specific records'}
+          <h1 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">{title}</h1>
+          <p className="text-[10px] md:text-xs text-gray-500 font-bold uppercase tracking-widest mt-0.5 md:mt-1">
+            {isAllBillsView ? 'Transaction History' : 'Status-specific records'}
           </p>
         </div>
-        <div className="flex gap-3">
-           <div className="relative">
+        <div className="flex gap-2 md:gap-3">
+           <div className="relative flex-1 md:flex-none">
              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
              <input 
               type="text" 
-              placeholder="Search bills..." 
+              placeholder="Search..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-white border rounded-xl pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-[#F57C00] outline-none w-48 transition-all focus:w-64"
+              className="bg-white border rounded-xl pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-[#F57C00] outline-none w-full md:w-48 md:focus:w-64 transition-all"
              />
            </div>
            <button 
             onClick={() => exportToPDF(displayedOrders, isAllBillsView ? (activeTab === 'TODAY' ? "Today" : "History") : title)}
-            className="bg-[#F57C00] text-white px-4 py-2 rounded-xl text-sm font-black hover:bg-orange-600 transition-all flex items-center gap-2 shadow-lg shadow-orange-100 active:scale-95"
+            className="bg-[#F57C00] text-white px-3 md:px-4 py-2 rounded-xl text-xs md:text-sm font-black hover:bg-orange-600 transition-all flex items-center gap-1 md:gap-2 shadow-lg shadow-orange-100 active:scale-95 shrink-0"
            >
-             <FileText size={18} /> Export PDF
+             <FileText size={16} /> <span className="hidden sm:inline">Export</span>
            </button>
         </div>
       </div>
@@ -367,8 +367,94 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pt-4">
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 pt-3 md:pt-4">
+        {/* Mobile Card View */}
+        <div className="md:hidden space-y-3">
+          {displayedOrders.length === 0 ? (
+            <div className="bg-white rounded-2xl p-8 text-center text-gray-400 shadow-sm border">
+              <PackageCheck size={48} className="mx-auto mb-3 opacity-20" />
+              <p className="font-bold">{searchQuery ? "No bills match your search." : "No orders found."}</p>
+            </div>
+          ) : (
+            displayedOrders.map(order => (
+              <div key={order.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      {order.status === 'COMPLETED' && <CheckCircle2 size={14} className="text-green-500" />}
+                      <span className="font-bold text-gray-800">{order.billNo}</span>
+                    </div>
+                    {order.customerName && (
+                      <div className="flex items-center gap-1 text-[10px] text-gray-500 font-medium mt-0.5">
+                        <User size={10} /> {order.customerName}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <span className="font-black text-[#F57C00] text-lg">₹{order.total.toFixed(0)}</span>
+                    <p className="text-[10px] text-gray-400">{order.date}</p>
+                  </div>
+                </div>
+                
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${
+                    order.orderType === 'DINE_IN' ? 'bg-orange-50 text-orange-600 border-orange-200' :
+                    order.orderType === 'DELIVERY' ? 'bg-blue-50 text-blue-600 border-blue-200' :
+                    'bg-purple-50 text-purple-600 border-purple-200'
+                  }`}>{order.orderType.replace('_', ' ')}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${
+                    order.status === 'COMPLETED' ? 'bg-green-50 text-green-600 border-green-200' :
+                    order.status === 'CANCELLED' ? 'bg-red-50 text-red-600 border-red-200' :
+                    'bg-yellow-50 text-yellow-600 border-yellow-200'
+                  }`}>{order.status}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border flex items-center gap-1 ${
+                    order.paymentMode === 'CASH' ? 'bg-gray-50 text-gray-600 border-gray-200' :
+                    order.paymentMode === 'CARD' ? 'bg-indigo-50 text-indigo-600 border-indigo-200' :
+                    'bg-emerald-50 text-emerald-600 border-emerald-200'
+                  }`}>
+                    {order.paymentMode === 'CASH' ? <Banknote size={10} /> : 
+                     order.paymentMode === 'CARD' ? <CreditCard size={10} /> : 
+                     <Smartphone size={10} />}
+                    {order.paymentMode}
+                  </span>
+                </div>
+
+                <div className="text-xs text-gray-500 mb-3">
+                  {order.items.slice(0, 2).map((it, idx) => (
+                    <span key={idx}>{it.name} x{it.quantity}{idx < Math.min(1, order.items.length - 1) ? ', ' : ''}</span>
+                  ))}
+                  {order.items.length > 2 && <span className="text-gray-400"> +{order.items.length - 2} more</span>}
+                </div>
+
+                <div className="flex gap-2 pt-3 border-t border-gray-100">
+                  <button 
+                    onClick={() => setSelectedOrder(order)}
+                    className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1"
+                  >
+                    <Eye size={14} /> View
+                  </button>
+                  <button 
+                    onClick={() => printReceipt(order)}
+                    className="flex-1 py-2 bg-[#F57C00] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1"
+                  >
+                    <Printer size={14} /> Print
+                  </button>
+                  {(order.status === 'PLACED' || order.status === 'READY' || order.status === 'PREPARING') && (
+                    <button 
+                      onClick={() => onUpdateStatus(order.id, 'COMPLETED')}
+                      className="py-2 px-3 bg-green-500 text-white rounded-xl text-xs font-bold"
+                    >
+                      <CheckCircle size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
           {renderTable(displayedOrders, searchQuery ? "No bills match your search." : (activeTab === 'TODAY' ? "No orders placed today." : "No orders found in history."))}
         </div>
       </div>

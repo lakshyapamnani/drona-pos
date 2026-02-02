@@ -18,7 +18,11 @@ import {
   FileSpreadsheet,
   Layers,
   Cloud,
-  CloudOff
+  CloudOff,
+  Home,
+  ClipboardList,
+  PieChart,
+  TrendingUp
 } from 'lucide-react';
 import { 
   MenuItem, 
@@ -57,6 +61,8 @@ const App: React.FC = () => {
   const [activeScreen, setActiveScreen] = useState<ActiveScreen>('BILLING');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [mobileTab, setMobileTab] = useState<'analytics' | 'orders' | 'bills' | 'reports'>('analytics');
   
   // States with Local Storage fallback
   const [categories, setCategories] = useState<Category[]>(() => {
@@ -103,11 +109,15 @@ const App: React.FC = () => {
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    window.addEventListener('resize', handleResize);
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
@@ -483,9 +493,107 @@ const App: React.FC = () => {
           />
         );
       default:
-        return <BillingScreen categories={categories} menuItems={menuItems} taxRate={taxRate} restaurantInfo={restaurantInfo} tables={tables} onCreateOrder={handleCreateOrder} onUpdateTableStatus={handleUpdateTableStatus} />;
+        return <BillingScreen categories={categories} menuItems={menuItems} taxRate={taxRate} restaurantInfo={restaurantInfo} tables={tables} tableCarts={tableCarts} onCreateOrder={handleCreateOrder} onUpdateTableStatus={handleUpdateTableStatus} onUpdateTableCarts={handleUpdateTableCarts} />;
     }
   };
+
+  // Mobile view rendering
+  const renderMobileScreen = () => {
+    switch (mobileTab) {
+      case 'analytics':
+        return <Dashboard orders={orders} />;
+      case 'orders':
+        return (
+          <OrdersList
+            title="Live Orders"
+            orders={orders.filter(o => o.status !== 'COMPLETED' && o.status !== 'CANCELLED')}
+            onUpdateStatus={handleUpdateOrderStatus}
+            onDeleteOrder={handleDeleteOrder}
+            restaurantInfo={restaurantInfo}
+            taxRate={taxRate}
+          />
+        );
+      case 'bills':
+        return (
+          <OrdersList
+            title="All Bills"
+            orders={orders}
+            onUpdateStatus={handleUpdateOrderStatus}
+            onDeleteOrder={handleDeleteOrder}
+            restaurantInfo={restaurantInfo}
+            taxRate={taxRate}
+          />
+        );
+      case 'reports':
+        return <Reports orders={orders} />;
+      default:
+        return <Dashboard orders={orders} />;
+    }
+  };
+
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
+        {/* Mobile Header */}
+        <header className="bg-white h-14 border-b flex items-center justify-between px-4 shrink-0 shadow-sm z-30">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-[#F57C00] rounded-lg flex items-center justify-center font-bold text-white">D</div>
+            <span className="text-lg font-bold tracking-tight">DRONA <span className="text-[#F57C00]">POS</span></span>
+          </div>
+          <div className="flex items-center gap-2">
+            {isOnline ? (
+              <div className="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                <Cloud size={12} />
+                <span className="text-[10px] font-black">LIVE</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 text-red-500 bg-red-50 px-2 py-1 rounded-full">
+                <CloudOff size={12} />
+                <span className="text-[10px] font-black">OFFLINE</span>
+              </div>
+            )}
+          </div>
+        </header>
+
+        {/* Mobile Content */}
+        <main className="flex-1 overflow-hidden">
+          {renderMobileScreen()}
+        </main>
+
+        {/* Bottom Navigation */}
+        <nav className="bg-white border-t shadow-lg shrink-0 safe-area-bottom">
+          <div className="flex justify-around items-center h-16">
+            <MobileNavItem
+              icon={<TrendingUp size={22} />}
+              label="Analytics"
+              active={mobileTab === 'analytics'}
+              onClick={() => setMobileTab('analytics')}
+            />
+            <MobileNavItem
+              icon={<Clock size={22} />}
+              label="Orders"
+              active={mobileTab === 'orders'}
+              onClick={() => setMobileTab('orders')}
+              badge={orders.filter(o => o.status !== 'COMPLETED' && o.status !== 'CANCELLED').length}
+            />
+            <MobileNavItem
+              icon={<Receipt size={22} />}
+              label="Bills"
+              active={mobileTab === 'bills'}
+              onClick={() => setMobileTab('bills')}
+            />
+            <MobileNavItem
+              icon={<PieChart size={22} />}
+              label="Reports"
+              active={mobileTab === 'reports'}
+              onClick={() => setMobileTab('reports')}
+            />
+          </div>
+        </nav>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden text-sm select-none">
@@ -651,6 +759,35 @@ const HeaderAction: React.FC<{ icon: React.ReactNode; tooltip: string; onClick?:
     title={tooltip}
   >
     {icon}
+  </button>
+);
+
+interface MobileNavItemProps {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  badge?: number;
+}
+
+const MobileNavItem: React.FC<MobileNavItemProps> = ({ icon, label, active, onClick, badge }) => (
+  <button
+    onClick={onClick}
+    className={`flex flex-col items-center justify-center py-2 px-4 rounded-xl transition-all relative ${
+      active 
+        ? 'text-[#F57C00]' 
+        : 'text-gray-400'
+    }`}
+  >
+    <div className={`relative p-2 rounded-xl transition-all ${active ? 'bg-orange-100' : ''}`}>
+      {icon}
+      {badge !== undefined && badge > 0 && (
+        <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+          {badge > 9 ? '9+' : badge}
+        </span>
+      )}
+    </div>
+    <span className={`text-[10px] mt-1 font-bold ${active ? 'text-[#F57C00]' : 'text-gray-500'}`}>{label}</span>
   </button>
 );
 
