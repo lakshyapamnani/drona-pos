@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, Search, Save, X, Utensils, Tag, Store, Percent, LayoutGrid } from 'lucide-react';
-import { MenuItem, Category, RestaurantInfo, Table } from '../types';
+import { MenuItem, Category, RestaurantInfo, Table, VegType } from '../types';
 
 interface MenuManagementProps {
   categories: Category[];
@@ -46,6 +46,9 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [editingCat, setEditingCat] = useState<Category | null>(null);
 
+  // Item form state for veg type
+  const [itemVegType, setItemVegType] = useState<VegType>('VEG');
+
   const [localRestaurantInfo, setLocalRestaurantInfo] = useState<RestaurantInfo>(restaurantInfo);
 
   const filteredItems = menuItems.filter(item => 
@@ -54,6 +57,7 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
 
   const handleOpenItemModal = (item?: MenuItem) => {
     setEditingItem(item || null);
+    setItemVegType(item?.vegType || 'VEG');
     setIsItemModalOpen(true);
   };
 
@@ -114,10 +118,22 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
                     <div key={item.id} className="p-4 border-2 border-gray-200 bg-white rounded-xl hover:border-[#F57C00] group transition-all shadow-sm">
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
-                          <span className={`w-3 h-3 rounded-full ${item.isVeg ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                          {item.vegType === 'BOTH' ? (
+                            <span className="w-3 h-3 rounded-full" style={{background: 'linear-gradient(90deg, #22c55e 50%, #ef4444 50%)'}}></span>
+                          ) : (
+                            <span className={`w-3 h-3 rounded-full ${item.vegType === 'VEG' || item.isVeg ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                          )}
                           <h4 className="font-black text-gray-900">{item.name}</h4>
                         </div>
-                        <span className="text-orange-600 font-black">₹{item.price}</span>
+                        {item.vegType === 'BOTH' ? (
+                          <div className="text-right">
+                            <span className="text-green-600 font-black text-xs">V: ₹{item.vegPrice}</span>
+                            <span className="text-gray-400 mx-1">|</span>
+                            <span className="text-red-600 font-black text-xs">NV: ₹{item.nonVegPrice}</span>
+                          </div>
+                        ) : (
+                          <span className="text-orange-600 font-black">₹{item.price}</span>
+                        )}
                       </div>
                       <p className="text-xs text-gray-800 mb-4 uppercase tracking-tighter font-black">
                         Category: {categories.find(c => c.id === item.categoryId)?.name || 'Unknown'}
@@ -321,11 +337,20 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
               onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
+                const vegPrice = itemVegType === 'BOTH' ? parseFloat(formData.get('vegPrice') as string) : undefined;
+                const nonVegPrice = itemVegType === 'BOTH' ? parseFloat(formData.get('nonVegPrice') as string) : undefined;
+                const basePrice = itemVegType === 'BOTH' 
+                  ? (vegPrice || 0) // Default to veg price
+                  : parseFloat(formData.get('price') as string);
+                
                 const itemData = {
                   name: formData.get('name') as string,
-                  price: parseFloat(formData.get('price') as string),
+                  price: basePrice,
                   categoryId: formData.get('categoryId') as string,
-                  isVeg: formData.get('isVeg') === 'on'
+                  isVeg: itemVegType === 'VEG',
+                  vegType: itemVegType,
+                  vegPrice: vegPrice,
+                  nonVegPrice: nonVegPrice
                 };
                 if (editingItem) {
                   onUpdateMenuItem({ ...editingItem, ...itemData });
@@ -333,6 +358,7 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
                   onAddMenuItem(itemData);
                 }
                 setIsItemModalOpen(false);
+                setItemVegType('VEG');
               }}
               className="p-6 space-y-5"
             >
@@ -345,7 +371,91 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
                   className="w-full p-4 bg-white border-2 border-gray-300 rounded-xl text-gray-900 font-black text-lg focus:ring-2 focus:ring-[#F57C00] outline-none shadow-inner" 
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              
+              {/* Veg Type Toggle */}
+              <div>
+                <label className="block text-sm font-black text-gray-900 mb-2 uppercase tracking-wider">Food Type</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setItemVegType('VEG')}
+                    className={`flex-1 py-3 px-4 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all ${
+                      itemVegType === 'VEG' 
+                        ? 'bg-green-500 text-white shadow-lg' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span className="w-3 h-3 rounded-full border-2 border-current p-[2px]">
+                      <div className="w-full h-full rounded-full bg-current"></div>
+                    </span>
+                    Veg Only
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setItemVegType('NON_VEG')}
+                    className={`flex-1 py-3 px-4 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all ${
+                      itemVegType === 'NON_VEG' 
+                        ? 'bg-red-500 text-white shadow-lg' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span className="w-3 h-3 rounded-full border-2 border-current p-[2px]">
+                      <div className="w-full h-full rounded-full bg-current"></div>
+                    </span>
+                    Non-Veg Only
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setItemVegType('BOTH')}
+                    className={`flex-1 py-3 px-4 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all ${
+                      itemVegType === 'BOTH' 
+                        ? 'bg-purple-500 text-white shadow-lg' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span className="w-3 h-3 rounded-full border-2 border-current p-[2px] flex items-center justify-center">
+                      <div className="w-full h-full rounded-full" style={{background: 'linear-gradient(90deg, #22c55e 50%, #ef4444 50%)'}}></div>
+                    </span>
+                    Both
+                  </button>
+                </div>
+              </div>
+
+              {/* Price Fields - Conditional based on vegType */}
+              {itemVegType === 'BOTH' ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-black text-green-600 mb-2 uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full border-2 border-green-600 p-[2px]">
+                        <div className="w-full h-full rounded-full bg-green-600"></div>
+                      </span>
+                      Veg Price (₹)
+                    </label>
+                    <input 
+                      name="vegPrice" 
+                      type="number" 
+                      defaultValue={editingItem?.vegPrice} 
+                      required 
+                      className="w-full p-4 bg-white border-2 border-green-300 rounded-xl text-gray-900 font-black text-lg focus:ring-2 focus:ring-green-500 outline-none shadow-inner" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-black text-red-600 mb-2 uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full border-2 border-red-600 p-[2px]">
+                        <div className="w-full h-full rounded-full bg-red-600"></div>
+                      </span>
+                      Non-Veg Price (₹)
+                    </label>
+                    <input 
+                      name="nonVegPrice" 
+                      type="number" 
+                      defaultValue={editingItem?.nonVegPrice} 
+                      required 
+                      className="w-full p-4 bg-white border-2 border-red-300 rounded-xl text-gray-900 font-black text-lg focus:ring-2 focus:ring-red-500 outline-none shadow-inner" 
+                    />
+                  </div>
+                </div>
+              ) : (
                 <div>
                   <label className="block text-sm font-black text-gray-900 mb-2 uppercase tracking-wider">Price (₹)</label>
                   <input 
@@ -356,27 +466,19 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
                     className="w-full p-4 bg-white border-2 border-gray-300 rounded-xl text-gray-900 font-black text-lg focus:ring-2 focus:ring-[#F57C00] outline-none shadow-inner" 
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-black text-gray-900 mb-2 uppercase tracking-wider">Category</label>
-                  <select 
-                    name="categoryId" 
-                    defaultValue={editingItem?.categoryId} 
-                    className="w-full p-4 bg-white border-2 border-gray-300 rounded-xl text-gray-900 font-black focus:ring-2 focus:ring-[#F57C00] outline-none shadow-inner appearance-none cursor-pointer"
-                  >
-                    {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-                  </select>
-                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-black text-gray-900 mb-2 uppercase tracking-wider">Category</label>
+                <select 
+                  name="categoryId" 
+                  defaultValue={editingItem?.categoryId} 
+                  className="w-full p-4 bg-white border-2 border-gray-300 rounded-xl text-gray-900 font-black focus:ring-2 focus:ring-[#F57C00] outline-none shadow-inner appearance-none cursor-pointer"
+                >
+                  {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                </select>
               </div>
-              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl border-2 border-gray-200">
-                <input 
-                  name="isVeg" 
-                  type="checkbox" 
-                  defaultChecked={editingItem?.isVeg} 
-                  id="isVeg" 
-                  className="w-6 h-6 accent-green-600 rounded cursor-pointer" 
-                />
-                <label htmlFor="isVeg" className="text-base font-black text-gray-900 cursor-pointer">Vegetarian Item</label>
-              </div>
+
               <button type="submit" className="w-full bg-[#F57C00] text-white py-4 rounded-2xl font-black text-xl shadow-xl shadow-orange-100 hover:bg-orange-600 transition-all active:scale-95">
                 {editingItem ? 'Update Menu Item' : 'Create Menu Item'}
               </button>

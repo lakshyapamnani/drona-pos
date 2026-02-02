@@ -17,12 +17,17 @@ export interface RestaurantInfo {
   address: string;
 }
 
+export type VegType = 'VEG' | 'NON_VEG' | 'BOTH';
+
 export interface MenuItem {
   id: string;
   name: string;
   price: number;
   categoryId: string;
   isVeg: boolean;
+  vegType: VegType;
+  vegPrice?: number;
+  nonVegPrice?: number;
   image?: string;
 }
 
@@ -33,6 +38,7 @@ export interface Category {
 
 export interface CartItem extends MenuItem {
   quantity: number;
+  selectedVegChoice?: 'VEG' | 'NON_VEG';
 }
 
 export interface Order {

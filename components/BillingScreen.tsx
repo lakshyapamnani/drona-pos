@@ -14,9 +14,48 @@ import {
   ShoppingCart,
   CheckCircle,
   User,
-  Users
+  Users,
+  X
 } from 'lucide-react';
 import { Category, MenuItem, CartItem, OrderType, PaymentMode, Order, RestaurantInfo, Table } from '../types';
+
+interface VegChoicePopupProps {
+  item: MenuItem;
+  onSelect: (choice: 'VEG' | 'NON_VEG') => void;
+  onClose: () => void;
+}
+
+const VegChoicePopup: React.FC<VegChoicePopupProps> = ({ item, onSelect, onClose }) => (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+    <div className="bg-white rounded-2xl p-6 w-80 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="font-black text-lg text-gray-900">Choose Option</h3>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <X size={20} />
+        </button>
+      </div>
+      <p className="text-sm text-gray-600 mb-4 font-medium">{item.name}</p>
+      <div className="flex gap-3">
+        <button
+          onClick={() => onSelect('VEG')}
+          className="flex-1 py-4 bg-green-500 hover:bg-green-600 text-white rounded-xl font-black transition-all flex flex-col items-center gap-1 shadow-lg shadow-green-200"
+        >
+          <span className="w-4 h-4 rounded-full bg-white border-2 border-green-700"></span>
+          <span>Veg</span>
+          <span className="text-sm opacity-90">₹{item.vegPrice}</span>
+        </button>
+        <button
+          onClick={() => onSelect('NON_VEG')}
+          className="flex-1 py-4 bg-red-500 hover:bg-red-600 text-white rounded-xl font-black transition-all flex flex-col items-center gap-1 shadow-lg shadow-red-200"
+        >
+          <span className="w-4 h-4 rounded-full bg-white border-2 border-red-700"></span>
+          <span>Non-Veg</span>
+          <span className="text-sm opacity-90">₹{item.nonVegPrice}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+);
 
 interface TableCart {
   items: CartItem[];
@@ -50,6 +89,7 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [orderType, setOrderType] = useState<OrderType>('DINE_IN');
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
+  const [vegChoiceItem, setVegChoiceItem] = useState<MenuItem | null>(null);
   
   // Get current cart based on selected table or default cart for non-dine-in
   const [defaultCart, setDefaultCart] = useState<CartItem[]>([]);
@@ -94,20 +134,46 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
     return menuItems.filter(item => item.categoryId === selectedCategoryId);
   }, [selectedCategoryId, menuItems]);
 
-  const addToCart = (item: MenuItem) => {
+  const handleAddItem = (item: MenuItem) => {
+    // If item has both veg and non-veg options, show popup
+    if (item.vegType === 'BOTH') {
+      setVegChoiceItem(item);
+      return;
+    }
+    addToCart(item);
+  };
+
+  const handleVegChoice = (choice: 'VEG' | 'NON_VEG') => {
+    if (!vegChoiceItem) return;
+    
+    const price = choice === 'VEG' ? vegChoiceItem.vegPrice! : vegChoiceItem.nonVegPrice!;
+    const modifiedItem: MenuItem = {
+      ...vegChoiceItem,
+      price,
+      isVeg: choice === 'VEG'
+    };
+    
+    addToCart(modifiedItem, choice);
+    setVegChoiceItem(null);
+  };
+
+  const addToCart = (item: MenuItem, vegChoice?: 'VEG' | 'NON_VEG') => {
+    // Create unique id for items with veg choice
+    const cartItemId = vegChoice ? `${item.id}-${vegChoice}` : item.id;
+    
     if (orderType === 'DINE_IN' && selectedTableId) {
       const currentItems = tableCarts[selectedTableId]?.items || [];
-      const existing = currentItems.find(i => i.id === item.id);
+      const existing = currentItems.find(i => i.id === cartItemId);
       
       if (existing) {
         updateTableCart(selectedTableId, (cart) => ({
           ...cart,
-          items: cart.items.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i)
+          items: cart.items.map(i => i.id === cartItemId ? { ...i, quantity: i.quantity + 1 } : i)
         }));
       } else {
         updateTableCart(selectedTableId, (cart) => ({
           ...cart,
-          items: [...cart.items, { ...item, quantity: 1 }]
+          items: [...cart.items, { ...item, id: cartItemId, quantity: 1, selectedVegChoice: vegChoice }]
         }));
       }
       
@@ -118,11 +184,11 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
       }
     } else {
       setDefaultCart(prev => {
-        const existing = prev.find(i => i.id === item.id);
+        const existing = prev.find(i => i.id === cartItemId);
         if (existing) {
-          return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+          return prev.map(i => i.id === cartItemId ? { ...i, quantity: i.quantity + 1 } : i);
         }
-        return [...prev, { ...item, quantity: 1 }];
+        return [...prev, { ...item, id: cartItemId, quantity: 1, selectedVegChoice: vegChoice }];
       });
     }
   };
@@ -307,6 +373,15 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* Veg Choice Popup */}
+      {vegChoiceItem && (
+        <VegChoicePopup
+          item={vegChoiceItem}
+          onSelect={handleVegChoice}
+          onClose={() => setVegChoiceItem(null)}
+        />
+      )}
+      
       {/* Table Selection Bar */}
       <div className="bg-white border-b shadow-sm px-4 py-3 shrink-0">
         <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar pb-1">
@@ -383,14 +458,28 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
           {filteredItems.map(item => (
             <button
               key={item.id}
-              onClick={() => addToCart(item)}
+              onClick={() => handleAddItem(item)}
               className="bg-white rounded-2xl shadow-sm border-2 border-transparent hover:border-[#F57C00] hover:shadow-lg transition-all p-4 text-left relative group flex flex-col h-full"
             >
               <div className="flex justify-between items-start mb-3">
-                <span className={`w-4 h-4 rounded-full border-2 ${item.isVeg ? 'border-green-600 p-[2px]' : 'border-red-600 p-[2px]'}`}>
-                  <div className={`w-full h-full rounded-full ${item.isVeg ? 'bg-green-600' : 'bg-red-600'}`}></div>
-                </span>
-                <span className="text-sm font-black text-gray-900 group-hover:text-[#F57C00]">₹{item.price}</span>
+                {item.vegType === 'BOTH' ? (
+                  <span className="w-4 h-4 rounded-full border-2 p-[2px]" style={{borderImage: 'linear-gradient(90deg, #16a34a 50%, #dc2626 50%) 1'}}>
+                    <div className="w-full h-full rounded-full" style={{background: 'linear-gradient(90deg, #16a34a 50%, #dc2626 50%)'}}></div>
+                  </span>
+                ) : (
+                  <span className={`w-4 h-4 rounded-full border-2 ${item.vegType === 'VEG' || item.isVeg ? 'border-green-600 p-[2px]' : 'border-red-600 p-[2px]'}`}>
+                    <div className={`w-full h-full rounded-full ${item.vegType === 'VEG' || item.isVeg ? 'bg-green-600' : 'bg-red-600'}`}></div>
+                  </span>
+                )}
+                {item.vegType === 'BOTH' ? (
+                  <div className="text-right">
+                    <span className="text-xs font-black text-green-600">V:₹{item.vegPrice}</span>
+                    <span className="text-gray-400 mx-0.5">/</span>
+                    <span className="text-xs font-black text-red-600">NV:₹{item.nonVegPrice}</span>
+                  </div>
+                ) : (
+                  <span className="text-sm font-black text-gray-900 group-hover:text-[#F57C00]">₹{item.price}</span>
+                )}
               </div>
               <h3 className="font-bold text-gray-800 text-sm md:text-base mb-1 line-clamp-2 flex-1">{item.name}</h3>
               <div className="mt-3 flex justify-end">
@@ -447,7 +536,14 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className={`shrink-0 w-2 h-2 rounded-full ${item.isVeg ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                    <h4 className="font-bold text-gray-800 truncate text-sm">{item.name}</h4>
+                    <h4 className="font-bold text-gray-800 truncate text-sm">
+                      {item.name}
+                      {item.selectedVegChoice && (
+                        <span className={`ml-1 text-[10px] font-black ${item.selectedVegChoice === 'VEG' ? 'text-green-600' : 'text-red-600'}`}>
+                          ({item.selectedVegChoice === 'VEG' ? 'V' : 'NV'})
+                        </span>
+                      )}
+                    </h4>
                   </div>
                   <p className="text-[11px] text-gray-500 font-medium">₹{item.price} per unit</p>
                 </div>
