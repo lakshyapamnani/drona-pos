@@ -414,6 +414,36 @@ const App: React.FC = () => {
     }
   };
 
+  // Reset menu database with new menu from constants
+  const handleResetMenuDatabase = async () => {
+    try {
+      // Clear old categories and menu items from Firebase
+      await set(ref(db, 'categories'), null);
+      await set(ref(db, 'menu_items'), null);
+      
+      // Sync all new categories to Firebase
+      for (const cat of INITIAL_CATEGORIES) {
+        await set(ref(db, `categories/${cat.id}`), cat);
+      }
+      
+      // Sync all new menu items to Firebase
+      for (const item of INITIAL_MENU_ITEMS) {
+        await set(ref(db, `menu_items/${item.id}`), item);
+      }
+      
+      // Update local state
+      setCategories(INITIAL_CATEGORIES);
+      setMenuItems(INITIAL_MENU_ITEMS);
+      localStorage.setItem('drona_categories', JSON.stringify(INITIAL_CATEGORIES));
+      localStorage.setItem('drona_menu_items', JSON.stringify(INITIAL_MENU_ITEMS));
+      
+      alert('Menu database reset successfully with new menu!');
+    } catch (error) {
+      console.error('Error resetting menu database:', error);
+      alert('Failed to reset menu database. Check console for details.');
+    }
+  };
+
   const renderScreen = () => {
     switch (activeScreen) {
       case 'BILLING':
@@ -496,6 +526,7 @@ const App: React.FC = () => {
             onDeleteCategory={handleDeleteCategory}
             onAddTable={handleAddTable}
             onDeleteTable={handleDeleteTable}
+            onResetMenuDatabase={handleResetMenuDatabase}
           />
         );
       default:

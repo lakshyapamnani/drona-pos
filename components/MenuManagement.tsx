@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Search, Save, X, Utensils, Tag, Store, Percent, LayoutGrid } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Save, X, Utensils, Tag, Store, Percent, LayoutGrid, RefreshCw, Database } from 'lucide-react';
 import { MenuItem, Category, RestaurantInfo, Table, VegType } from '../types';
 
 interface MenuManagementProps {
@@ -18,6 +18,7 @@ interface MenuManagementProps {
   onDeleteCategory: (id: string) => void;
   onAddTable: (name: string) => void;
   onDeleteTable: (id: string) => void;
+  onResetMenuDatabase?: () => void;
 }
 
 const MenuManagement: React.FC<MenuManagementProps> = ({ 
@@ -35,9 +36,10 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
   onUpdateCategory,
   onDeleteCategory,
   onAddTable,
-  onDeleteTable
+  onDeleteTable,
+  onResetMenuDatabase
 }) => {
-  const [activeTab, setActiveTab] = useState<'ITEMS' | 'CATEGORIES' | 'TABLES' | 'TAXES' | 'RESTAURANT'>('ITEMS');
+  const [activeTab, setActiveTab] = useState<'ITEMS' | 'CATEGORIES' | 'TABLES' | 'TAXES' | 'RESTAURANT' | 'DATABASE'>('ITEMS');
   const [searchTerm, setSearchTerm] = useState('');
   const [newTableName, setNewTableName] = useState('');
   
@@ -96,6 +98,7 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
           <TabItem label="Tables" active={activeTab === 'TABLES'} onClick={() => setActiveTab('TABLES')} icon={<LayoutGrid size={18} />} />
           <TabItem label="Taxes & Charges" active={activeTab === 'TAXES'} onClick={() => setActiveTab('TAXES')} icon={<Percent size={18} />} />
           <TabItem label="Restaurant Profile" active={activeTab === 'RESTAURANT'} onClick={() => setActiveTab('RESTAURANT')} icon={<Store size={18} />} />
+          <TabItem label="Database" active={activeTab === 'DATABASE'} onClick={() => setActiveTab('DATABASE')} icon={<Database size={18} />} />
         </div>
 
         <div className="p-6 flex-1 flex flex-col overflow-hidden">
@@ -320,6 +323,74 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
                  </button>
                  <p className="text-xs text-gray-800 text-center font-black uppercase">These details appear on your printed receipts.</p>
                </form>
+            </div>
+          )}
+
+          {activeTab === 'DATABASE' && (
+            <div className="max-w-2xl mx-auto space-y-6">
+              {/* Reset Menu Database Section */}
+              <div className="p-8 border-2 border-orange-200 rounded-2xl bg-orange-50/50 shadow-sm">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-orange-100 rounded-xl">
+                    <RefreshCw size={28} className="text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-black text-gray-900 mb-2">Reset Menu Database</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      This will clear all existing menu items and categories from Firebase database and replace them with the new menu defined in the app. Use this to sync the latest menu with all connected devices.
+                    </p>
+                    <div className="bg-white p-4 rounded-xl border mb-4">
+                      <h4 className="font-bold text-gray-900 mb-2">New Menu Summary:</h4>
+                      <ul className="text-sm text-gray-600 space-y-1">
+                        <li>• <strong>12 Categories:</strong> Power Up W Greens, Eggilicious, Humming Hummus, Pasta, Sandwiches, Smokin Grill, House of Keema, Wraps Rolls & Quesadilla, Meals & More, Beverages, Smoothies & Bowls, Dessert</li>
+                        <li>• <strong>93 Menu Items</strong> with veg/non-veg dual pricing support</li>
+                      </ul>
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (confirm('Are you sure you want to reset the menu database? This will replace all existing menu items and categories.')) {
+                          onResetMenuDatabase?.();
+                        }
+                      }}
+                      className="px-6 py-3 bg-orange-500 text-white rounded-xl font-black hover:bg-orange-600 transition-all flex items-center gap-2 shadow-lg"
+                    >
+                      <Database size={20} />
+                      Reset & Sync New Menu
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Current Stats */}
+              <div className="p-6 border-2 border-gray-200 rounded-2xl bg-white shadow-sm">
+                <h3 className="text-lg font-black text-gray-900 mb-4">Current Database Stats</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-blue-50 rounded-xl">
+                    <div className="text-3xl font-black text-blue-600">{categories.length}</div>
+                    <div className="text-sm text-gray-600 font-bold">Categories</div>
+                  </div>
+                  <div className="p-4 bg-green-50 rounded-xl">
+                    <div className="text-3xl font-black text-green-600">{menuItems.length}</div>
+                    <div className="text-sm text-gray-600 font-bold">Menu Items</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="p-6 border-2 border-blue-200 rounded-2xl bg-blue-50/50">
+                <h3 className="text-lg font-black text-gray-900 mb-2">📱 Mobile View Access</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  To access the mobile view on your phone, use this URL:
+                </p>
+                <div className="bg-white p-3 rounded-lg border text-center">
+                  <code className="text-sm font-mono text-blue-600 font-bold">
+                    {window.location.origin}/mobile
+                  </code>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Open this URL on your phone to see Analytics, Orders, Bills, and Reports in a mobile-optimized view.
+                </p>
+              </div>
             </div>
           )}
         </div>
