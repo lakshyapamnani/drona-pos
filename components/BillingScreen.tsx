@@ -334,9 +334,9 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
     const newOrder: Order = {
       id: Math.random().toString(36).substr(2, 9),
       billNo: `INV-${Date.now().toString().substr(-6)}`,
-      customerName: (customerName || "").trim(),
-      tableId: orderType === 'DINE_IN' ? selectedTableId || undefined : undefined,
-      tableName: orderType === 'DINE_IN' ? selectedTable?.name : undefined,
+      customerName: (customerName || "").trim() || "Guest",
+      tableId: orderType === 'DINE_IN' && selectedTableId ? selectedTableId : "",
+      tableName: orderType === 'DINE_IN' && selectedTable ? selectedTable.name : "",
       date: new Date().toLocaleDateString(),
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       items: [...currentCart],
@@ -349,7 +349,9 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
       status: 'COMPLETED'
     };
 
+    console.log("Placing order:", newOrder);
     onCreateOrder(newOrder);
+    console.log("onCreateOrder called");
     if (print) {
       printReceipt(newOrder);
     }
