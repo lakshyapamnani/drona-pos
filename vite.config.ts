@@ -16,18 +16,23 @@ export default defineConfig(({ mode }) => {
         react(),
         VitePWA({
           registerType: 'autoUpdate',
-          includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+          includeAssets: ['dronaiconn.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
           manifest: {
             name: 'Drona POS',
             short_name: 'DronaPOS',
             description: 'Point of Sale System for Drona',
-            theme_color: '#3b82f6',
+            theme_color: '#F57C00',
             background_color: '#ffffff',
             display: 'standalone',
             orientation: 'portrait',
             start_url: '/',
             scope: '/',
             icons: [
+              {
+                src: 'dronaiconn.ico',
+                sizes: '48x48 72x72 96x96 128x128 256x256',
+                type: 'image/x-icon'
+              },
               {
                 src: 'pwa-192x192.png',
                 sizes: '192x192',
