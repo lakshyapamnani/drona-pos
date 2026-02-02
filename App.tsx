@@ -82,6 +82,10 @@ const App: React.FC = () => {
       { id: 't6', name: 'T-6', status: 'AVAILABLE' },
     ];
   });
+  const [tableCarts, setTableCarts] = useState<Record<string, { items: any[]; customerName: string }>>(() => {
+    const saved = localStorage.getItem('drona_table_carts');
+    return saved ? JSON.parse(saved) : {};
+  });
   const [taxRate, setTaxRate] = useState(() => {
     const saved = localStorage.getItem('drona_tax_rate');
     return saved ? parseFloat(saved) : INITIAL_TAX_RATE;
@@ -170,12 +174,26 @@ const App: React.FC = () => {
       }
     });
 
+    // Table Carts Sync (for pending orders on tables)
+    const tableCartsRef = ref(db, 'table_carts');
+    const unsubscribeTableCarts = onValue(tableCartsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setTableCarts(data);
+        localStorage.setItem('drona_table_carts', JSON.stringify(data));
+      } else {
+        setTableCarts({});
+        localStorage.setItem('drona_table_carts', JSON.stringify({}));
+      }
+    });
+
     return () => {
       unsubscribeCats();
       unsubscribeMenu();
       unsubscribeOrders();
       unsubscribeSettings();
       unsubscribeTables();
+      unsubscribeTableCarts();
     };
   }, []);
 
@@ -335,6 +353,16 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUpdateTableCarts = async (newTableCarts: Record<string, { items: any[]; customerName: string }>) => {
+    setTableCarts(newTableCarts);
+    localStorage.setItem('drona_table_carts', JSON.stringify(newTableCarts));
+    try {
+      await set(ref(db, 'table_carts'), newTableCarts);
+    } catch (error) {
+      console.error("Firebase Sync Error (Table Carts):", error);
+    }
+  };
+
   const renderScreen = () => {
     switch (activeScreen) {
       case 'BILLING':
@@ -345,8 +373,10 @@ const App: React.FC = () => {
             taxRate={taxRate}
             restaurantInfo={restaurantInfo}
             tables={tables}
+            tableCarts={tableCarts}
             onCreateOrder={handleCreateOrder}
             onUpdateTableStatus={handleUpdateTableStatus}
+            onUpdateTableCarts={handleUpdateTableCarts}
           />
         );
       case 'DASHBOARD':
