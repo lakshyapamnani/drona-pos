@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate PWA Icons</title>
+</head>
+<body>
+    <h1>PWA Icon Generator</h1>
+    <p>Icons will be generated and downloaded automatically.</p>
+    <canvas id="canvas" style="display: none;"></canvas>
+    
+    <script>
+        // Generate simple PWA icons with DRONA text
+        function generateIcon(size) {
+            const canvas = document.getElementById('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#3b82f6');
+            gradient.addColorStop(1, '#1d4ed8');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Add text
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `bold ${size * 0.25}px Inter, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('DRONA', size / 2, size / 2 - size * 0.08);
+            
+            ctx.font = `${size * 0.15}px Inter, sans-serif`;
+            ctx.fillText('POS', size / 2, size / 2 + size * 0.12);
+            
+            // Download
+            canvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `pwa-${size}x${size}.png`;
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+        
+        // Generate apple touch icon
+        function generateAppleTouchIcon() {
+            const canvas = document.getElementById('canvas');
+            const size = 180;
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#3b82f6');
+            gradient.addColorStop(1, '#1d4ed8');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Add text
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `bold ${size * 0.25}px Inter, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('DRONA', size / 2, size / 2 - size * 0.08);
+            
+            ctx.font = `${size * 0.15}px Inter, sans-serif`;
+            ctx.fillText('POS', size / 2, size / 2 + size * 0.12);
+            
+            // Download
+            canvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'apple-touch-icon.png';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+        
+        // Generate favicon
+        function generateFavicon() {
+            const canvas = document.getElementById('canvas');
+            const size = 32;
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#3b82f6');
+            gradient.addColorStop(1, '#1d4ed8');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Add text
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 18px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('D', size / 2, size / 2);
+            
+            // Download
+            canvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'favicon.ico';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+        
+        // Generate all icons on load
+        setTimeout(() => {
+            generateIcon(192);
+            setTimeout(() => generateIcon(512), 500);
+            setTimeout(() => generateAppleTouchIcon(), 1000);
+            setTimeout(() => generateFavicon(), 1500);
+            setTimeout(() => {
+                document.body.innerHTML += '<p style="color: green; font-weight: bold;">✓ All icons generated! Move them to the /public folder.</p>';
+            }, 2000);
+        }, 100);
+    </script>
+</body>
+</html>
