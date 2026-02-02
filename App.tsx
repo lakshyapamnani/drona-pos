@@ -61,8 +61,10 @@ const App: React.FC = () => {
   const [activeScreen, setActiveScreen] = useState<ActiveScreen>('BILLING');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  // Check if URL path is /mobile for dedicated mobile view
+  const [isMobileRoute, setIsMobileRoute] = useState(() => window.location.pathname === '/mobile');
   const [mobileTab, setMobileTab] = useState<'analytics' | 'orders' | 'bills' | 'reports'>('analytics');
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   
   // States with Local Storage fallback
   const [categories, setCategories] = useState<Category[]>(() => {
@@ -105,46 +107,48 @@ const App: React.FC = () => {
     };
   });
 
-  // Connectivity Listener
+  // Connectivity and Route Listener
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    const handlePopState = () => setIsMobileRoute(window.location.pathname === '/mobile');
     
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    window.addEventListener('resize', handleResize);
+    window.addEventListener('popstate', handlePopState);
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('popstate', handlePopState);
     };
   }, []);
 
-  // Initialize Firebase with default data if empty
+  // Initialize Firebase with default data if empty (only once, not on every load)
   useEffect(() => {
     const initializeDatabase = async () => {
       try {
-        // Force reset menu data with new menu
-        // Clear old categories and menu items
-        await set(ref(db, 'categories'), null);
-        await set(ref(db, 'menu_items'), null);
-        
-        // Sync all new categories to Firebase
-        for (const cat of INITIAL_CATEGORIES) {
-          await set(ref(db, `categories/${cat.id}`), cat);
-        }
-        console.log('New categories synced to Firebase');
-        
-        // Sync all new menu items to Firebase
-        for (const item of INITIAL_MENU_ITEMS) {
-          await set(ref(db, `menu_items/${item.id}`), item);
-        }
-        console.log('New menu items synced to Firebase');
-        
-        // Update local storage
-        localStorage.setItem('drona_categories', JSON.stringify(INITIAL_CATEGORIES));
-        localStorage.setItem('drona_menu_items', JSON.stringify(INITIAL_MENU_ITEMS));
+        // Check if menu data already exists in Firebase
+        const categoriesRef = ref(db, 'categories');
+        onValue(categoriesRef, async (snapshot) => {
+          if (!snapshot.exists()) {
+            // Only sync if no data exists
+            for (const cat of INITIAL_CATEGORIES) {
+              await set(ref(db, `categories/${cat.id}`), cat);
+            }
+            console.log('Categories synced to Firebase');
+          }
+        }, { onlyOnce: true });
+
+        const menuRef = ref(db, 'menu_items');
+        onValue(menuRef, async (snapshot) => {
+          if (!snapshot.exists()) {
+            // Only sync if no data exists
+            for (const item of INITIAL_MENU_ITEMS) {
+              await set(ref(db, `menu_items/${item.id}`), item);
+            }
+            console.log('Menu items synced to Firebase');
+          }
+        }, { onlyOnce: true });
       } catch (error) {
         console.error('Error initializing database:', error);
       }
@@ -186,7 +190,12 @@ const App: React.FC = () => {
         const sortedOrders = orderArray.sort((a, b) => new Date(b.date + ' ' + b.time).getTime() - new Date(a.date + ' ' + a.time).getTime());
         setOrders(sortedOrders);
         localStorage.setItem('drona_orders', JSON.stringify(sortedOrders));
+      } else {
+        // No orders in Firebase, use local storage or empty array
+        const saved = localStorage.getItem('drona_orders');
+        setOrders(saved ? JSON.parse(saved) : []);
       }
+      setIsDataLoaded(true);
     });
 
     // Settings Sync
@@ -496,6 +505,17 @@ const App: React.FC = () => {
 
   // Mobile view rendering
   const renderMobileScreen = () => {
+    // Show loading state while data is being fetched
+    if (!isDataLoaded) {
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center bg-gray-50">
+          <div className="w-16 h-16 border-4 border-[#F57C00] border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading data from cloud...</p>
+          <p className="text-gray-400 text-sm mt-1">Please wait</p>
+        </div>
+      );
+    }
+
     switch (mobileTab) {
       case 'analytics':
         return <Dashboard orders={orders} />;
@@ -528,8 +548,8 @@ const App: React.FC = () => {
     }
   };
 
-  // Mobile Layout
-  if (isMobile) {
+  // Mobile Layout - triggered by /mobile URL path
+  if (isMobileRoute) {
     return (
       <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
         {/* Mobile Header */}
