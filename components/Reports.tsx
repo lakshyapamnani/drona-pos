@@ -16,7 +16,8 @@ import {
   Package,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  X
 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Order } from '../types';

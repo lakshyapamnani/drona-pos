@@ -197,7 +197,7 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
         <thead>
           <tr className="bg-gray-50 border-b">
             <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Order Details</th>
-            <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Time</th>
+            <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date & Time</th>
             <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Items</th>
             <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Type</th>
             <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Total</th>
@@ -231,7 +231,12 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
                     )}
                   </div>
                 </td>
-                <td className="px-6 py-4 text-gray-600 text-sm font-semibold">{order.time}</td>
+                <td className="px-6 py-4">
+                  <div className="flex flex-col">
+                    <span className="text-gray-800 text-sm font-bold">{order.date}</span>
+                    <span className="text-gray-500 text-xs font-semibold">{order.time}</span>
+                  </div>
+                </td>
                 <td className="px-6 py-4">
                   <div className="flex flex-col">
                     {order.items.slice(0, 2).map((it, idx) => (
