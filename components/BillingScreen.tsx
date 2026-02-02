@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Plus, 
   Minus, 
@@ -13,54 +13,169 @@ import {
   ShoppingBag,
   ShoppingCart,
   CheckCircle,
-  User
+  User,
+  Users
 } from 'lucide-react';
-import { Category, MenuItem, CartItem, OrderType, PaymentMode, Order, RestaurantInfo } from '../types';
+import { Category, MenuItem, CartItem, OrderType, PaymentMode, Order, RestaurantInfo, Table } from '../types';
+
+interface TableCart {
+  items: CartItem[];
+  customerName: string;
+}
 
 interface BillingScreenProps {
   categories: Category[];
   menuItems: MenuItem[];
   taxRate: number;
   restaurantInfo: RestaurantInfo;
+  tables: Table[];
   onCreateOrder: (order: Order) => void;
+  onUpdateTableStatus: (tableId: string, status: Table['status'], currentOrderId?: string) => void;
 }
 
-const BillingScreen: React.FC<BillingScreenProps> = ({ categories, menuItems, taxRate, restaurantInfo, onCreateOrder }) => {
+const BillingScreen: React.FC<BillingScreenProps> = ({ 
+  categories, 
+  menuItems, 
+  taxRate, 
+  restaurantInfo, 
+  tables,
+  onCreateOrder,
+  onUpdateTableStatus
+}) => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(categories[0]?.id || '');
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [orderType, setOrderType] = useState<OrderType>('DINE_IN');
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
-  const [customerName, setCustomerName] = useState('');
+  
+  // Table-based cart storage
+  const [tableCarts, setTableCarts] = useState<Record<string, TableCart>>({});
+  
+  // Get current cart based on selected table or default cart for non-dine-in
+  const [defaultCart, setDefaultCart] = useState<CartItem[]>([]);
+  const [defaultCustomerName, setDefaultCustomerName] = useState('');
+
+  const currentCart = useMemo(() => {
+    if (orderType === 'DINE_IN' && selectedTableId) {
+      return tableCarts[selectedTableId]?.items || [];
+    }
+    return defaultCart;
+  }, [orderType, selectedTableId, tableCarts, defaultCart]);
+
+  const customerName = useMemo(() => {
+    if (orderType === 'DINE_IN' && selectedTableId) {
+      return tableCarts[selectedTableId]?.customerName || '';
+    }
+    return defaultCustomerName;
+  }, [orderType, selectedTableId, tableCarts, defaultCustomerName]);
+
+  const setCustomerName = (name: string) => {
+    if (orderType === 'DINE_IN' && selectedTableId) {
+      setTableCarts(prev => ({
+        ...prev,
+        [selectedTableId]: {
+          ...prev[selectedTableId],
+          customerName: name,
+          items: prev[selectedTableId]?.items || []
+        }
+      }));
+    } else {
+      setDefaultCustomerName(name);
+    }
+  };
 
   const filteredItems = useMemo(() => {
     return menuItems.filter(item => item.categoryId === selectedCategoryId);
   }, [selectedCategoryId, menuItems]);
 
   const addToCart = (item: MenuItem) => {
-    setCart(prev => {
-      const existing = prev.find(i => i.id === item.id);
-      if (existing) {
-        return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+    if (orderType === 'DINE_IN' && selectedTableId) {
+      setTableCarts(prev => {
+        const currentItems = prev[selectedTableId]?.items || [];
+        const existing = currentItems.find(i => i.id === item.id);
+        
+        if (existing) {
+          return {
+            ...prev,
+            [selectedTableId]: {
+              ...prev[selectedTableId],
+              items: currentItems.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i),
+              customerName: prev[selectedTableId]?.customerName || ''
+            }
+          };
+        }
+        return {
+          ...prev,
+          [selectedTableId]: {
+            items: [...currentItems, { ...item, quantity: 1 }],
+            customerName: prev[selectedTableId]?.customerName || ''
+          }
+        };
+      });
+      
+      // Mark table as occupied when items are added
+      const table = tables.find(t => t.id === selectedTableId);
+      if (table && table.status === 'AVAILABLE') {
+        onUpdateTableStatus(selectedTableId, 'OCCUPIED');
       }
-      return [...prev, { ...item, quantity: 1 }];
-    });
+    } else {
+      setDefaultCart(prev => {
+        const existing = prev.find(i => i.id === item.id);
+        if (existing) {
+          return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+        }
+        return [...prev, { ...item, quantity: 1 }];
+      });
+    }
   };
 
   const updateQuantity = (id: string, delta: number) => {
-    setCart(prev => prev.map(item => {
-      if (item.id === id) {
-        const newQty = Math.max(0, item.quantity + delta);
-        return { ...item, quantity: newQty };
-      }
-      return item;
-    }).filter(item => item.quantity > 0));
+    if (orderType === 'DINE_IN' && selectedTableId) {
+      setTableCarts(prev => {
+        const currentItems = prev[selectedTableId]?.items || [];
+        const updatedItems = currentItems.map(item => {
+          if (item.id === id) {
+            const newQty = Math.max(0, item.quantity + delta);
+            return { ...item, quantity: newQty };
+          }
+          return item;
+        }).filter(item => item.quantity > 0);
+        
+        return {
+          ...prev,
+          [selectedTableId]: {
+            ...prev[selectedTableId],
+            items: updatedItems,
+            customerName: prev[selectedTableId]?.customerName || ''
+          }
+        };
+      });
+    } else {
+      setDefaultCart(prev => prev.map(item => {
+        if (item.id === id) {
+          const newQty = Math.max(0, item.quantity + delta);
+          return { ...item, quantity: newQty };
+        }
+        return item;
+      }).filter(item => item.quantity > 0));
+    }
   };
 
   const removeFromCart = (id: string) => {
-    setCart(prev => prev.filter(item => item.id !== id));
+    if (orderType === 'DINE_IN' && selectedTableId) {
+      setTableCarts(prev => ({
+        ...prev,
+        [selectedTableId]: {
+          ...prev[selectedTableId],
+          items: (prev[selectedTableId]?.items || []).filter(item => item.id !== id),
+          customerName: prev[selectedTableId]?.customerName || ''
+        }
+      }));
+    } else {
+      setDefaultCart(prev => prev.filter(item => item.id !== id));
+    }
   };
 
-  const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  const subtotal = currentCart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const tax = subtotal * taxRate;
   const total = subtotal + tax;
 
@@ -136,18 +251,27 @@ const BillingScreen: React.FC<BillingScreenProps> = ({ categories, menuItems, ta
   };
 
   const handlePlaceOrder = (print = false) => {
-    if (cart.length === 0) {
+    if (currentCart.length === 0) {
       alert("Please add items to the cart first.");
       return;
     }
+
+    if (orderType === 'DINE_IN' && !selectedTableId) {
+      alert("Please select a table for dine-in orders.");
+      return;
+    }
+
+    const selectedTable = tables.find(t => t.id === selectedTableId);
 
     const newOrder: Order = {
       id: Math.random().toString(36).substr(2, 9),
       billNo: `INV-${Date.now().toString().substr(-6)}`,
       customerName: (customerName || "").trim(),
+      tableId: orderType === 'DINE_IN' ? selectedTableId || undefined : undefined,
+      tableName: orderType === 'DINE_IN' ? selectedTable?.name : undefined,
       date: new Date().toLocaleDateString(),
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      items: [...cart],
+      items: [...currentCart],
       subtotal,
       tax,
       total,
@@ -161,33 +285,101 @@ const BillingScreen: React.FC<BillingScreenProps> = ({ categories, menuItems, ta
     if (print) {
       printReceipt(newOrder);
     }
-    setCart([]);
-    setCustomerName('');
+    
+    // Clear the cart for the table and make table available
+    if (orderType === 'DINE_IN' && selectedTableId) {
+      setTableCarts(prev => {
+        const updated = { ...prev };
+        delete updated[selectedTableId];
+        return updated;
+      });
+      onUpdateTableStatus(selectedTableId, 'AVAILABLE');
+      setSelectedTableId(null);
+    } else {
+      setDefaultCart([]);
+      setDefaultCustomerName('');
+    }
+  };
+
+  // Get table item count for badges
+  const getTableItemCount = (tableId: string) => {
+    return tableCarts[tableId]?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
   };
 
   return (
-    <div className="flex h-full overflow-hidden">
-      <div className="w-32 md:w-48 bg-white border-r flex flex-col shrink-0 shadow-sm z-20">
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
-          {categories.map(cat => (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Table Selection Bar */}
+      <div className="bg-white border-b shadow-sm px-4 py-3 shrink-0">
+        <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar pb-1">
+          <div className="flex items-center gap-2 shrink-0">
+            <Users size={20} className="text-[#F57C00]" />
+            <span className="text-sm font-black text-gray-700 uppercase tracking-wider">Tables</span>
+          </div>
+          <div className="h-6 w-px bg-gray-300" />
+          {tables.map(table => {
+            const itemCount = getTableItemCount(table.id);
+            const isSelected = selectedTableId === table.id;
+            const isOccupied = table.status === 'OCCUPIED' || itemCount > 0;
+            
+            return (
+              <button
+                key={table.id}
+                onClick={() => {
+                  setSelectedTableId(table.id);
+                  setOrderType('DINE_IN');
+                }}
+                className={`relative px-4 py-2 rounded-xl font-black text-sm transition-all shrink-0 ${
+                  isSelected 
+                    ? 'bg-[#F57C00] text-white shadow-lg shadow-orange-200' 
+                    : isOccupied
+                      ? 'bg-orange-100 text-[#F57C00] border-2 border-[#F57C00]'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {table.name}
+                {itemCount > 0 && (
+                  <span className={`absolute -top-2 -right-2 w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center ${
+                    isSelected ? 'bg-white text-[#F57C00]' : 'bg-[#F57C00] text-white'
+                  }`}>
+                    {itemCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+          {selectedTableId && (
             <button
-              key={cat.id}
-              onClick={() => setSelectedCategoryId(cat.id)}
-              className={`w-full py-3.5 px-4 text-left transition-all flex items-center gap-3 group border-b border-gray-100 ${
-                selectedCategoryId === cat.id 
-                  ? 'bg-orange-50 border-r-4 border-r-[#F57C00] text-[#F57C00]' 
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
+              onClick={() => setSelectedTableId(null)}
+              className="px-3 py-2 rounded-xl font-bold text-xs text-gray-500 hover:bg-gray-100 transition-all shrink-0"
             >
-              <span className={`text-xs md:text-sm font-bold uppercase tracking-tight ${selectedCategoryId === cat.id ? 'text-[#F57C00]' : 'text-gray-700'}`}>
-                {cat.name}
-              </span>
+              Clear Selection
             </button>
-          ))}
+          )}
         </div>
       </div>
 
-      <div className="flex-1 bg-gray-50 p-6 overflow-y-auto custom-scrollbar">
+      <div className="flex flex-1 overflow-hidden">
+        <div className="w-32 md:w-48 bg-white border-r flex flex-col shrink-0 shadow-sm z-20">
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
+            {categories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategoryId(cat.id)}
+                className={`w-full py-3.5 px-4 text-left transition-all flex items-center gap-3 group border-b border-gray-100 ${
+                  selectedCategoryId === cat.id 
+                    ? 'bg-orange-50 border-r-4 border-r-[#F57C00] text-[#F57C00]' 
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <span className={`text-xs md:text-sm font-bold uppercase tracking-tight ${selectedCategoryId === cat.id ? 'text-[#F57C00]' : 'text-gray-700'}`}>
+                  {cat.name}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex-1 bg-gray-50 p-6 overflow-y-auto custom-scrollbar">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
           {filteredItems.map(item => (
             <button
@@ -213,6 +405,15 @@ const BillingScreen: React.FC<BillingScreenProps> = ({ categories, menuItems, ta
       </div>
 
       <div className="w-80 md:w-96 bg-white border-l shadow-2xl flex flex-col shrink-0 z-10">
+        {/* Table indicator for Dine In */}
+        {orderType === 'DINE_IN' && selectedTableId && (
+          <div className="px-4 py-2 bg-[#F57C00] text-white text-center">
+            <span className="font-black text-sm">
+              {tables.find(t => t.id === selectedTableId)?.name || 'Table'} - Active Order
+            </span>
+          </div>
+        )}
+        
         <div className="flex p-3 bg-gray-100 border-b gap-1">
           <OrderTypeTab active={orderType === 'DINE_IN'} onClick={() => setOrderType('DINE_IN')} label="Dine In" icon={<UtensilsCrossed size={16} />} />
           <OrderTypeTab active={orderType === 'DELIVERY'} onClick={() => setOrderType('DELIVERY')} label="Delivery" icon={<Truck size={16} />} />
@@ -233,13 +434,16 @@ const BillingScreen: React.FC<BillingScreenProps> = ({ categories, menuItems, ta
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
-          {cart.length === 0 ? (
+          {currentCart.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-40">
               <ShoppingBag size={64} strokeWidth={1} className="mb-3" />
               <p className="font-bold text-lg">No Items Added</p>
+              {orderType === 'DINE_IN' && !selectedTableId && (
+                <p className="text-sm mt-2">Select a table to start</p>
+              )}
             </div>
           ) : (
-            cart.map(item => (
+            currentCart.map(item => (
               <div key={item.id} className="flex gap-3 items-center group animate-in fade-in slide-in-from-right-2 duration-200">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
@@ -299,6 +503,7 @@ const BillingScreen: React.FC<BillingScreenProps> = ({ categories, menuItems, ta
             </button>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

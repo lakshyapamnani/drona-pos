@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Search, Save, X, Utensils, Tag, Store, Percent } from 'lucide-react';
-import { MenuItem, Category, RestaurantInfo } from '../types';
+import { Plus, Edit2, Trash2, Search, Save, X, Utensils, Tag, Store, Percent, LayoutGrid } from 'lucide-react';
+import { MenuItem, Category, RestaurantInfo, Table } from '../types';
 
 interface MenuManagementProps {
   categories: Category[];
   menuItems: MenuItem[];
   taxRate: number;
   restaurantInfo: RestaurantInfo;
+  tables: Table[];
   setTaxRate: (rate: number) => void;
   setRestaurantInfo: (info: RestaurantInfo) => void;
   onAddMenuItem: (item: Omit<MenuItem, 'id'>) => void;
@@ -15,6 +16,8 @@ interface MenuManagementProps {
   onAddCategory: (name: string) => void;
   onUpdateCategory: (cat: Category) => void;
   onDeleteCategory: (id: string) => void;
+  onAddTable: (name: string) => void;
+  onDeleteTable: (id: string) => void;
 }
 
 const MenuManagement: React.FC<MenuManagementProps> = ({ 
@@ -22,6 +25,7 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
   menuItems, 
   taxRate,
   restaurantInfo,
+  tables,
   setTaxRate,
   setRestaurantInfo,
   onAddMenuItem, 
@@ -29,10 +33,13 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
   onDeleteMenuItem,
   onAddCategory,
   onUpdateCategory,
-  onDeleteCategory
+  onDeleteCategory,
+  onAddTable,
+  onDeleteTable
 }) => {
-  const [activeTab, setActiveTab] = useState<'ITEMS' | 'CATEGORIES' | 'TAXES' | 'RESTAURANT'>('ITEMS');
+  const [activeTab, setActiveTab] = useState<'ITEMS' | 'CATEGORIES' | 'TABLES' | 'TAXES' | 'RESTAURANT'>('ITEMS');
   const [searchTerm, setSearchTerm] = useState('');
+  const [newTableName, setNewTableName] = useState('');
   
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
@@ -82,6 +89,7 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
         <div className="flex border-b overflow-x-auto custom-scrollbar bg-gray-50/50">
           <TabItem label="Menu Items" active={activeTab === 'ITEMS'} onClick={() => setActiveTab('ITEMS')} icon={<Utensils size={18} />} />
           <TabItem label="Categories" active={activeTab === 'CATEGORIES'} onClick={() => setActiveTab('CATEGORIES')} icon={<Tag size={18} />} />
+          <TabItem label="Tables" active={activeTab === 'TABLES'} onClick={() => setActiveTab('TABLES')} icon={<LayoutGrid size={18} />} />
           <TabItem label="Taxes & Charges" active={activeTab === 'TAXES'} onClick={() => setActiveTab('TAXES')} icon={<Percent size={18} />} />
           <TabItem label="Restaurant Profile" active={activeTab === 'RESTAURANT'} onClick={() => setActiveTab('RESTAURANT')} icon={<Store size={18} />} />
         </div>
@@ -146,6 +154,90 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {activeTab === 'TABLES' && (
+            <div className="space-y-6">
+              {/* Add New Table */}
+              <div className="max-w-xl p-6 border-2 border-gray-200 rounded-2xl bg-white shadow-sm">
+                <h3 className="text-lg font-black text-gray-900 mb-4">Add New Table</h3>
+                <div className="flex gap-3">
+                  <input 
+                    type="text"
+                    value={newTableName}
+                    onChange={(e) => setNewTableName(e.target.value)}
+                    placeholder="Enter table name (e.g., T-7)"
+                    className="flex-1 p-3 rounded-xl border-2 border-gray-300 text-gray-900 font-black focus:ring-2 focus:ring-[#F57C00] outline-none placeholder:text-gray-400"
+                  />
+                  <button 
+                    onClick={() => {
+                      if (newTableName.trim()) {
+                        onAddTable(newTableName.trim());
+                        setNewTableName('');
+                      }
+                    }}
+                    disabled={!newTableName.trim()}
+                    className="px-6 py-3 bg-[#F57C00] text-white rounded-xl font-black hover:bg-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <Plus size={20} /> Add Table
+                  </button>
+                </div>
+              </div>
+
+              {/* Existing Tables */}
+              <div>
+                <h3 className="text-lg font-black text-gray-900 mb-4">Existing Tables ({tables.length})</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                  {tables.map(table => (
+                    <div 
+                      key={table.id} 
+                      className={`p-5 border-2 rounded-2xl text-center relative group transition-all ${
+                        table.status === 'AVAILABLE' 
+                          ? 'border-green-300 bg-green-50' 
+                          : table.status === 'OCCUPIED'
+                          ? 'border-orange-300 bg-orange-50'
+                          : 'border-blue-300 bg-blue-50'
+                      }`}
+                    >
+                      <div className="text-2xl font-black text-gray-900 mb-1">{table.name}</div>
+                      <div className={`text-xs font-black uppercase ${
+                        table.status === 'AVAILABLE' 
+                          ? 'text-green-600' 
+                          : table.status === 'OCCUPIED'
+                          ? 'text-orange-600'
+                          : 'text-blue-600'
+                      }`}>
+                        {table.status}
+                      </div>
+                      {table.status === 'AVAILABLE' && (
+                        <button 
+                          onClick={() => {
+                            if (confirm(`Are you sure you want to delete ${table.name}?`)) {
+                              onDeleteTable(table.id);
+                            }
+                          }}
+                          className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                      {table.status === 'OCCUPIED' && (
+                        <div className="mt-2 text-xs text-gray-600 font-bold">
+                          (Has active order)
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {tables.length === 0 && (
+                  <div className="text-center py-12 text-gray-500">
+                    <LayoutGrid size={48} className="mx-auto mb-4 opacity-50" />
+                    <p className="font-black">No tables configured yet</p>
+                    <p className="text-sm">Add tables above to get started with dine-in orders</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
