@@ -1,6 +1,6 @@
 # PWA Setup Instructions
 
-Your Drona POS application is now configured as a Progressive Web App! 
+Your Drona POS application is now configured as a Progressive Web App!
 
 ## What's Been Added
 
@@ -22,6 +22,7 @@ To create the PWA icons:
    - `favicon.ico`
 
 Alternatively, you can use online tools like:
+
 - https://realfavicongenerator.net/
 - https://www.pwabuilder.com/imageGenerator
 
@@ -45,6 +46,7 @@ Alternatively, you can use online tools like:
 ## Deployment
 
 When deploying to production:
+
 - Ensure HTTPS is enabled (required for PWA)
 - Icons are in the `/public` folder
 - Build and deploy the `/dist` folder

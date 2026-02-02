@@ -182,6 +182,18 @@ const App: React.FC = () => {
     }
   };
 
+  const handleDeleteOrder = async (orderId: string) => {
+    const updatedOrders = orders.filter(o => o.id !== orderId);
+    setOrders(updatedOrders);
+    localStorage.setItem('drona_orders', JSON.stringify(updatedOrders));
+
+    try {
+      await set(ref(db, `orders/${orderId}`), null);
+    } catch (error) {
+      console.error("Firebase Sync Error (Delete Order):", error);
+    }
+  };
+
   const handleAddMenuItem = async (item: Omit<MenuItem, 'id'>) => {
     const newId = Math.random().toString(36).substr(2, 9);
     const newItem = { ...item, id: newId };
@@ -277,16 +289,18 @@ const App: React.FC = () => {
             title="Live Orders" 
             orders={orders.filter(o => o.status !== 'COMPLETED' && o.status !== 'CANCELLED')} 
             onUpdateStatus={handleUpdateOrderStatus}
+            onDeleteOrder={handleDeleteOrder}
             restaurantInfo={restaurantInfo}
             taxRate={taxRate}
           />
         );
       case 'ALL_ORDERS':
         return (
-          <OrdersList 
-            title="All Bills" 
-            orders={orders} 
+          <OrdersList
+            title="All Bills"
+            orders={orders}
             onUpdateStatus={handleUpdateOrderStatus}
+            onDeleteOrder={handleDeleteOrder}
             restaurantInfo={restaurantInfo}
             taxRate={taxRate}
           />
@@ -297,6 +311,7 @@ const App: React.FC = () => {
             title="Completed Orders" 
             orders={orders.filter(o => o.status === 'COMPLETED')} 
             onUpdateStatus={handleUpdateOrderStatus}
+            onDeleteOrder={handleDeleteOrder}
             restaurantInfo={restaurantInfo}
             taxRate={taxRate}
           />
@@ -307,6 +322,7 @@ const App: React.FC = () => {
             title="Cancelled Orders" 
             orders={orders.filter(o => o.status === 'CANCELLED')} 
             onUpdateStatus={handleUpdateOrderStatus}
+            onDeleteOrder={handleDeleteOrder}
             restaurantInfo={restaurantInfo}
             taxRate={taxRate}
           />

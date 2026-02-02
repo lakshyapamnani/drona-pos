@@ -20,7 +20,8 @@ import {
   Phone,
   CreditCard,
   Banknote,
-  Smartphone
+  Smartphone,
+  Trash2
 } from 'lucide-react';
 import { Order, OrderStatus, RestaurantInfo } from '../types';
 
@@ -28,11 +29,12 @@ interface OrdersListProps {
   title: string;
   orders: Order[];
   onUpdateStatus: (id: string, status: OrderStatus) => void;
+  onDeleteOrder: (id: string) => void;
   restaurantInfo: RestaurantInfo;
   taxRate: number;
 }
 
-const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, restaurantInfo, taxRate }) => {
+const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, onDeleteOrder, restaurantInfo, taxRate }) => {
   const isAllBillsView = title === "All Bills";
   const [activeTab, setActiveTab] = useState<'TODAY' | 'ALL'>('TODAY');
   const [searchQuery, setSearchQuery] = useState('');
@@ -282,6 +284,16 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
                         onClick={() => onUpdateStatus(order.id, 'CANCELLED')}
                       />
                     )}
+                    <ActionButton 
+                      icon={<Trash2 size={16} />} 
+                      color="text-gray-400 hover:text-red-500" 
+                      tooltip="Delete Order" 
+                      onClick={() => {
+                        if (confirm(`Are you sure you want to delete order ${order.billNo}?`)) {
+                          onDeleteOrder(order.id);
+                        }
+                      }}
+                    />
                   </div>
                 </td>
               </tr>
