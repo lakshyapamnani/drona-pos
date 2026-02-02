@@ -111,6 +111,41 @@ const App: React.FC = () => {
     };
   }, []);
 
+  // Initialize Firebase with default data if empty
+  useEffect(() => {
+    const initializeDatabase = async () => {
+      try {
+        // Check if categories exist in Firebase
+        const categoriesRef = ref(db, 'categories');
+        onValue(categoriesRef, async (snapshot) => {
+          if (!snapshot.exists()) {
+            // Sync all initial categories to Firebase
+            for (const cat of INITIAL_CATEGORIES) {
+              await set(ref(db, `categories/${cat.id}`), cat);
+            }
+            console.log('Categories synced to Firebase');
+          }
+        }, { onlyOnce: true });
+
+        // Check if menu items exist in Firebase
+        const menuRef = ref(db, 'menu_items');
+        onValue(menuRef, async (snapshot) => {
+          if (!snapshot.exists()) {
+            // Sync all initial menu items to Firebase
+            for (const item of INITIAL_MENU_ITEMS) {
+              await set(ref(db, `menu_items/${item.id}`), item);
+            }
+            console.log('Menu items synced to Firebase');
+          }
+        }, { onlyOnce: true });
+      } catch (error) {
+        console.error('Error initializing database:', error);
+      }
+    };
+
+    initializeDatabase();
+  }, []);
+
   // Firebase Real-time Listeners
   useEffect(() => {
     // Categories Sync
