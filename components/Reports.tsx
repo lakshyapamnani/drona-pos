@@ -33,9 +33,12 @@ const Reports: React.FC<ReportsProps> = ({ orders }) => {
   const [orderType, setOrderType] = useState('All');
   const [orderStatus, setOrderStatus] = useState('All');
 
+  // Ensure orders is always an array
+  const safeOrders = orders || [];
+
   // Filtered orders based on all filters
   const filteredOrders = useMemo(() => {
-    return orders.filter(order => {
+    return safeOrders.filter(order => {
       // Date filter
       if (startDate && new Date(order.date) < new Date(startDate)) return false;
       if (endDate && new Date(order.date) > new Date(endDate)) return false;
@@ -51,7 +54,7 @@ const Reports: React.FC<ReportsProps> = ({ orders }) => {
       
       return true;
     });
-  }, [orders, startDate, endDate, paymentMode, orderType, orderStatus]);
+  }, [safeOrders, startDate, endDate, paymentMode, orderType, orderStatus]);
 
   // Analytics calculations
   const analytics = useMemo(() => {
@@ -421,30 +424,33 @@ const Reports: React.FC<ReportsProps> = ({ orders }) => {
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Daily Sales Chart */}
-          {analytics.dailyData.length > 0 && (
+          {analytics.dailyData && analytics.dailyData.length > 0 && (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-black text-gray-900 mb-4">Daily Sales Trend</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={analytics.dailyData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="total" stroke="#F57C00" strokeWidth={3} dot={{ fill: '#F57C00', r: 4 }} />
-                </LineChart>
-              </ResponsiveContainer>
+              <div style={{ width: '100%', height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={analytics.dailyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="total" stroke="#F57C00" strokeWidth={3} dot={{ fill: '#F57C00', r: 4 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           )}
 
           {/* Payment Mode Distribution */}
-          {paymentData.length > 0 && (
+          {paymentData && paymentData.length > 0 && (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-black text-gray-900 mb-4">Payment Mode Revenue</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={paymentData}
-                    cx="50%"
+              <div style={{ width: '100%', height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={paymentData}
+                      cx="50%"
                     cy="50%"
                     labelLine={false}
                     label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
@@ -459,27 +465,30 @@ const Reports: React.FC<ReportsProps> = ({ orders }) => {
                   <Tooltip formatter={(value: number) => `₹${value.toFixed(2)}`} />
                 </PieChart>
               </ResponsiveContainer>
+              </div>
             </div>
           )}
 
           {/* Order Type Distribution */}
-          {orderTypeData.length > 0 && (
+          {orderTypeData && orderTypeData.length > 0 && (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-black text-gray-900 mb-4">Order Type Distribution</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={orderTypeData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#3b82f6" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <div style={{ width: '100%', height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={orderTypeData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           )}
 
           {/* Top Selling Items */}
-          {analytics.topItems.length > 0 && (
+          {analytics.topItems && analytics.topItems.length > 0 && (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-black text-gray-900 mb-4">Top Selling Items</h3>
               <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar">
