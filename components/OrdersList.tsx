@@ -23,7 +23,15 @@ import {
   Smartphone,
   Trash2
 } from 'lucide-react';
-import { Order, OrderStatus, RestaurantInfo } from '../types';
+import { Order, OrderStatus, RestaurantInfo, CartItem } from '../types';
+
+const formatItemDisplay = (it: CartItem) => {
+  const base = `${it.name} x ${it.quantity}`;
+  const addons = it.selectedAddons?.length
+    ? ` (+ ${it.selectedAddons.map(a => a.name).join(', ')})`
+    : '';
+  return base + addons;
+};
 
 interface OrdersListProps {
   title: string;
@@ -43,14 +51,25 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
   // Ensure orders is always an array
   const safeOrders = orders || [];
   
-  const todayDate = new Date().toLocaleDateString();
-
+  // Use calendar-day comparison so "Today's Orders" works across app restarts
+  // (toLocaleDateString() can return different formats between sessions)
   const { todayOrders, allOrders } = useMemo(() => {
+    const now = new Date();
+    const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const isOrderToday = (o: Order) => {
+      const d = o.date;
+      if (!d) return false;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d === todayKey;
+      const parsed = new Date(d);
+      if (isNaN(parsed.getTime())) return false;
+      const orderKey = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+      return orderKey === todayKey;
+    };
     return {
-      todayOrders: safeOrders.filter(o => o.date === todayDate),
+      todayOrders: safeOrders.filter(isOrderToday),
       allOrders: safeOrders
     };
-  }, [safeOrders, todayDate]);
+  }, [safeOrders]);
 
   const displayedOrders = useMemo(() => {
     const list = isAllBillsView 
@@ -124,7 +143,7 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
           </div>
           ${order.items.map(it => `
             <div class="item-row">
-              <span class="item-name">${it.name}</span>
+              <span class="item-name">${it.name}${it.selectedAddons?.length ? ' + ' + it.selectedAddons.map(a => a.name).join(', ') : ''}</span>
               <span class="qty">${it.quantity}</span>
               <span class="price">${(it.price * it.quantity).toFixed(0)}</span>
             </div>
@@ -209,7 +228,7 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
                   <td>${o.billNo}</td>
                   <td>${o.customerName || '-'}</td>
                   <td>${o.time}</td>
-                  <td>${(o.items || []).map(i => i.name + ' x ' + i.quantity).join(', ')}</td>
+                  <td>${(o.items || []).map(i => formatItemDisplay(i)).join(', ')}</td>
                   <td>${o.orderType}</td>
                   <td>₹${(o.total || 0).toFixed(2)}</td>
                   <td>${o.status}</td>
@@ -272,9 +291,9 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="flex flex-col">
+                  <div className="flex flex-col gap-0.5">
                     {order.items.slice(0, 2).map((it, idx) => (
-                      <span key={idx} className="text-xs text-gray-600 font-medium">{it.name} x {it.quantity}</span>
+                      <span key={idx} className="text-xs text-gray-600 font-medium">{formatItemDisplay(it)}</span>
                     ))}
                     {order.items.length > 2 && <span className="text-[10px] text-gray-400 font-bold">+{order.items.length - 2} more...</span>}
                   </div>
@@ -482,7 +501,7 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
 
                 <div className="text-xs text-gray-500 mb-3">
                   {order.items.slice(0, 2).map((it, idx) => (
-                    <span key={idx}>{it.name} x{it.quantity}{idx < Math.min(1, order.items.length - 1) ? ', ' : ''}</span>
+                    <span key={idx}>{formatItemDisplay(it)}{idx < Math.min(1, order.items.length - 1) ? ', ' : ''}</span>
                   ))}
                   {order.items.length > 2 && <span className="text-gray-400"> +{order.items.length - 2} more</span>}
                 </div>
@@ -558,9 +577,12 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
                   {selectedOrder.items.map((item, idx) => (
                     <div key={idx} className="flex justify-between items-center bg-white p-3 border border-gray-100 rounded-xl">
                       <div className="flex items-center gap-3">
-                        <div className={`w-2 h-2 rounded-full ${item.isVeg ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${item.isVeg || item.selectedVegChoice === 'VEG' ? 'bg-green-500' : 'bg-red-500'}`}></div>
                         <div>
                           <p className="font-bold text-gray-800 text-sm">{item.name}</p>
+                          {item.selectedAddons?.length ? (
+                            <p className="text-[10px] text-orange-600 font-bold">+ {item.selectedAddons.map(a => a.name).join(', ')}</p>
+                          ) : null}
                           <p className="text-[10px] text-gray-400 font-bold">₹{item.price} x {item.quantity}</p>
                         </div>
                       </div>
