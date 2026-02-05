@@ -188,8 +188,10 @@ const App: React.FC = () => {
     const menuRef = ref(db, 'menu_items');
     const unsubscribeMenu = onValue(menuRef, (snapshot) => {
       const data = snapshot.val();
+      console.log("App.tsx - Firebase menu_items listener triggered, data:", data);
       if (data) {
         const itemArray = Object.values(data) as MenuItem[];
+        console.log("App.tsx - Setting menuItems state with", itemArray.length, "items");
         setMenuItems(itemArray);
         localStorage.setItem('drona_menu_items', JSON.stringify(itemArray));
       }
@@ -354,19 +356,41 @@ const App: React.FC = () => {
 
   const handleAddMenuItem = async (item: Omit<MenuItem, 'id'>) => {
     const newId = Math.random().toString(36).substr(2, 9);
-    const newItem = { ...item, id: newId };
+    
+    // Clean the item - remove undefined values (Firebase doesn't accept undefined)
+    const cleanItem: Record<string, any> = { id: newId };
+    Object.entries(item).forEach(([key, value]) => {
+      if (value !== undefined) {
+        cleanItem[key] = value;
+      }
+    });
+    
+    console.log("App.tsx - Adding menu item:", cleanItem);
     try {
-      await set(ref(db, `menu_items/${newId}`), newItem);
+      await set(ref(db, `menu_items/${newId}`), cleanItem);
+      console.log("App.tsx - Menu item saved successfully to Firebase");
     } catch (error) {
       console.error("Firebase Sync Error (Add Item):", error);
+      alert("Failed to save menu item: " + error);
     }
   };
 
   const handleUpdateMenuItem = async (updatedItem: MenuItem) => {
+    // Clean the item - remove undefined values (Firebase doesn't accept undefined)
+    const cleanItem: Record<string, any> = {};
+    Object.entries(updatedItem).forEach(([key, value]) => {
+      if (value !== undefined) {
+        cleanItem[key] = value;
+      }
+    });
+    
+    console.log("App.tsx - Updating menu item:", cleanItem);
     try {
-      await set(ref(db, `menu_items/${updatedItem.id}`), updatedItem);
+      await set(ref(db, `menu_items/${updatedItem.id}`), cleanItem);
+      console.log("App.tsx - Menu item updated successfully");
     } catch (error) {
       console.error("Firebase Sync Error (Update Item):", error);
+      alert("Failed to update menu item: " + error);
     }
   };
 

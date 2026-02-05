@@ -198,6 +198,17 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
   const [optionsItem, setOptionsItem] = useState<MenuItem | null>(null);
   
+  // Ensure selectedCategoryId is always valid when categories change
+  useEffect(() => {
+    if (categories.length > 0) {
+      // If current selection is empty or doesn't exist in categories, select the first one
+      const categoryExists = categories.some(cat => cat.id === selectedCategoryId);
+      if (!selectedCategoryId || !categoryExists) {
+        setSelectedCategoryId(categories[0].id);
+      }
+    }
+  }, [categories, selectedCategoryId]);
+  
   // Get current cart based on selected table or default cart for non-dine-in
   const [defaultCart, setDefaultCart] = useState<CartItem[]>([]);
   const [defaultCustomerName, setDefaultCustomerName] = useState('');
@@ -238,7 +249,12 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
   };
 
   const filteredItems = useMemo(() => {
-    return menuItems.filter(item => item.categoryId === selectedCategoryId);
+    const filtered = menuItems.filter(item => item.categoryId === selectedCategoryId);
+    console.log('BillingScreen - selectedCategoryId:', selectedCategoryId);
+    console.log('BillingScreen - Total menuItems:', menuItems.length);
+    console.log('BillingScreen - Filtered items for category:', filtered.length);
+    console.log('BillingScreen - All item categoryIds:', menuItems.map(i => ({ name: i.name, catId: i.categoryId })));
+    return filtered;
   }, [selectedCategoryId, menuItems]);
 
   // Get addons for the current category

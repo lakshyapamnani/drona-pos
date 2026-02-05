@@ -1,8 +1,9 @@
 {
   "name": "drona-pos",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "version": "1.0.0",
+  "description": "Drona POS - Restaurant Point of Sale System",
+  "author": "Drona",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
