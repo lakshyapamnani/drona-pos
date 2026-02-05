@@ -63,8 +63,9 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
   const [newAddonPrice, setNewAddonPrice] = useState('');
   const [newAddonCategoryId, setNewAddonCategoryId] = useState('');
 
-  // Item form state for veg type
+  // Item form state
   const [itemVegType, setItemVegType] = useState<VegType>('VEG');
+  const [itemCategoryId, setItemCategoryId] = useState('');
 
   const [localRestaurantInfo, setLocalRestaurantInfo] = useState<RestaurantInfo>(restaurantInfo);
 
@@ -75,6 +76,8 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
   const handleOpenItemModal = (item?: MenuItem) => {
     setEditingItem(item || null);
     setItemVegType(item?.vegType || 'VEG');
+    // Set the category - use item's category if editing, otherwise use first category
+    setItemCategoryId(item?.categoryId || categories[0]?.id || '');
     setIsItemModalOpen(true);
   };
 
@@ -594,15 +597,20 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
                   ? (vegPrice || 0) // Default to veg price
                   : parseFloat(formData.get('price') as string);
                 
+                const categoryId = formData.get('categoryId') as string;
+                console.log('MenuManagement - Saving item with categoryId:', categoryId);
+                console.log('MenuManagement - Available categories:', categories.map(c => ({ id: c.id, name: c.name })));
+                
                 const itemData = {
                   name: formData.get('name') as string,
                   price: basePrice,
-                  categoryId: formData.get('categoryId') as string,
+                  categoryId: categoryId,
                   isVeg: itemVegType === 'VEG',
                   vegType: itemVegType,
                   vegPrice: vegPrice,
                   nonVegPrice: nonVegPrice
                 };
+                console.log('MenuManagement - Item data being saved:', itemData);
                 if (editingItem) {
                   onUpdateMenuItem({ ...editingItem, ...itemData });
                 } else {
@@ -723,7 +731,9 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
                 <label className="block text-sm font-black text-gray-900 mb-2 uppercase tracking-wider">Category</label>
                 <select 
                   name="categoryId" 
-                  defaultValue={editingItem?.categoryId} 
+                  value={itemCategoryId}
+                  onChange={(e) => setItemCategoryId(e.target.value)}
+                  required
                   className="w-full p-4 bg-white border-2 border-gray-300 rounded-xl text-gray-900 font-black focus:ring-2 focus:ring-[#F57C00] outline-none shadow-inner appearance-none cursor-pointer"
                 >
                   {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
