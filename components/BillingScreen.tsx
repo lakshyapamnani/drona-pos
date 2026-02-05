@@ -249,11 +249,10 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
   };
 
   const filteredItems = useMemo(() => {
-    const filtered = menuItems.filter(item => item.categoryId === selectedCategoryId);
-    console.log('BillingScreen - selectedCategoryId:', selectedCategoryId);
-    console.log('BillingScreen - Total menuItems:', menuItems.length);
-    console.log('BillingScreen - Filtered items for category:', filtered.length);
-    console.log('BillingScreen - All item categoryIds:', menuItems.map(i => ({ name: i.name, catId: i.categoryId })));
+    // Filter by category - items must have a matching categoryId to appear
+    const filtered = menuItems.filter(
+      item => item && item.categoryId && String(item.categoryId) === String(selectedCategoryId)
+    );
     return filtered;
   }, [selectedCategoryId, menuItems]);
 
