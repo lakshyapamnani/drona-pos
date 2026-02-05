@@ -156,11 +156,22 @@ const App: React.FC = () => {
         const menuRef = ref(db, 'menu_items');
         onValue(menuRef, async (snapshot) => {
           if (!snapshot.exists()) {
-            // Only sync if no data exists
             for (const item of INITIAL_MENU_ITEMS) {
               await set(ref(db, `menu_items/${item.id}`), item);
             }
             console.log('Menu items synced to Firebase');
+          }
+        }, { onlyOnce: true });
+
+        const settingsRef = ref(db, 'settings');
+        onValue(settingsRef, async (snapshot) => {
+          if (!snapshot.exists()) {
+            const savedTax = localStorage.getItem('drona_tax_rate');
+            const taxRateVal = savedTax ? parseFloat(savedTax) : INITIAL_TAX_RATE;
+            const savedRestaurant = localStorage.getItem('drona_restaurant_info');
+            const restaurantVal = savedRestaurant ? JSON.parse(savedRestaurant) : { name: 'DRONA POS CAFE', phone: '+91 9876543210', address: '123 Main Street, Food Park, City' };
+            await set(settingsRef, { taxRate: taxRateVal, restaurantInfo: restaurantVal });
+            console.log('Settings (taxes, restaurant) synced to Firebase');
           }
         }, { onlyOnce: true });
       } catch (error) {
@@ -477,6 +488,7 @@ const App: React.FC = () => {
 
   const handleSaveTaxRate = async (newRate: number) => {
     setTaxRate(newRate);
+    localStorage.setItem('drona_tax_rate', newRate.toString());
     try {
       await update(ref(db, 'settings'), { taxRate: newRate });
     } catch (error) {
