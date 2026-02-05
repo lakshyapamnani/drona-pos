@@ -404,7 +404,11 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
                      <span className="p-4 font-black text-gray-900 bg-gray-50 rounded-xl border-2 border-gray-300">%</span>
                    </div>
                  </div>
-                 <button className="w-full bg-[#F57C00] text-white py-4 rounded-xl font-black text-lg flex items-center justify-center gap-2 hover:bg-orange-600 shadow-xl shadow-orange-100 transition-all active:scale-95">
+                 <button 
+                   type="button"
+                   onClick={() => setTaxRate(taxRate)}
+                   className="w-full bg-[#F57C00] text-white py-4 rounded-xl font-black text-lg flex items-center justify-center gap-2 hover:bg-orange-600 shadow-xl shadow-orange-100 transition-all active:scale-95"
+                 >
                    <Save size={20} /> Save Settings
                  </button>
                  <p className="text-xs text-gray-800 text-center font-black uppercase">These settings apply to all bills globally.</p>
