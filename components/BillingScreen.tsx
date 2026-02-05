@@ -446,7 +446,7 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
           </div>
           ${order.items.map(it => `
             <div class="item-row">
-              <span class="item-name">${it.name}</span>
+              <span class="item-name">${it.name}${it.selectedAddons?.length ? ' + ' + it.selectedAddons.map(a => a.name).join(', ') : ''}</span>
               <span class="qty">${it.quantity}</span>
               <span class="price">${(it.price * it.quantity).toFixed(0)}</span>
             </div>
@@ -481,6 +481,8 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
     }
 
     const selectedTable = tables.find(t => t.id === selectedTableId);
+    const d = new Date();
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
     const newOrder: Order = {
       id: Math.random().toString(36).substr(2, 9),
@@ -488,7 +490,7 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
       customerName: (customerName || "").trim() || "Guest",
       tableId: orderType === 'DINE_IN' && selectedTableId ? selectedTableId : "",
       tableName: orderType === 'DINE_IN' && selectedTable ? selectedTable.name : "",
-      date: new Date().toLocaleDateString(),
+      date: dateStr, // YYYY-MM-DD for consistent "Today" filtering across app restarts
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       items: [...currentCart],
       subtotal,

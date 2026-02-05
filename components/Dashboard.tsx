@@ -13,8 +13,18 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ orders }) => {
   const stats = useMemo(() => {
-    const today = new Date().toLocaleDateString();
-    const todayOrders = orders.filter(o => o.date === today && o.status !== 'CANCELLED');
+    const now = new Date();
+    const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const isOrderToday = (o: Order) => {
+      const d = o.date;
+      if (!d) return false;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d === todayKey;
+      const parsed = new Date(d);
+      if (isNaN(parsed.getTime())) return false;
+      const orderKey = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+      return orderKey === todayKey;
+    };
+    const todayOrders = orders.filter(o => isOrderToday(o) && o.status !== 'CANCELLED');
     const totalSales = todayOrders.reduce((acc, o) => acc + o.total, 0);
     const pendingOrders = orders.filter(o => o.status !== 'COMPLETED' && o.status !== 'CANCELLED').length;
     const avgOrderValue = todayOrders.length > 0 ? totalSales / todayOrders.length : 0;
