@@ -4,15 +4,11 @@
   "version": "1.0.0",
   "description": "Drona POS - Restaurant Point of Sale System",
   "author": "Drona",
-  "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "preview:https": "vite preview --https",
-    "electron:dev": "vite build && electron .",
-    "electron:build": "vite build && electron-builder --win --dir",
-    "electron:dist": "vite build && electron-builder --win"
+    "preview:https": "vite preview --https"
   },
   "dependencies": {
     "firebase": "^12.8.0",
@@ -24,33 +20,8 @@
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
-    "electron": "^40.1.0",
-    "electron-builder": "^26.7.0",
-    "electron-squirrel-startup": "^1.0.1",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
     "vite-plugin-pwa": "^1.2.0"
-  },
-  "build": {
-    "appId": "com.drona.pos",
-    "productName": "Drona POS",
-    "directories": {
-      "output": "electron-dist"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*"
-    ],
-    "win": {
-      "target": [
-        {
-          "target": "dir",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "signAndEditExecutable": false
-    }
   }
 }
