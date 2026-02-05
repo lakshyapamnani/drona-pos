@@ -223,6 +223,10 @@ const Reports: React.FC<ReportsProps> = ({ orders }) => {
               <div class="summary-value">${analytics.totalOrders}</div>
             </div>
             <div class="summary-card">
+              <div class="summary-label">Total Sale</div>
+              <div class="summary-value">₹${analytics.totalSubtotal.toFixed(2)}</div>
+            </div>
+            <div class="summary-card">
               <div class="summary-label">Total Revenue</div>
               <div class="summary-value">₹${analytics.totalRevenue.toFixed(2)}</div>
             </div>
@@ -390,7 +394,14 @@ const Reports: React.FC<ReportsProps> = ({ orders }) => {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+          <StatCard 
+            icon={<DollarSign size={20} />}
+            label="Total Sale"
+            value={`₹${analytics.totalSubtotal.toFixed(0)}`}
+            subValue={`Before tax`}
+            color="green"
+          />
           <StatCard 
             icon={<DollarSign size={20} />}
             label="Total Revenue"

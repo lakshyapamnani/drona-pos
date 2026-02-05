@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Search, Save, X, Utensils, Tag, Store, Percent, LayoutGrid, RefreshCw, Database } from 'lucide-react';
-import { MenuItem, Category, RestaurantInfo, Table, VegType } from '../types';
+import { Plus, Edit2, Trash2, Search, Save, X, Utensils, Tag, Store, Percent, LayoutGrid, RefreshCw, Database, Package } from 'lucide-react';
+import { MenuItem, Category, RestaurantInfo, Table, VegType, Addon } from '../types';
 
 interface MenuManagementProps {
   categories: Category[];
@@ -8,6 +8,7 @@ interface MenuManagementProps {
   taxRate: number;
   restaurantInfo: RestaurantInfo;
   tables: Table[];
+  addons: Addon[];
   setTaxRate: (rate: number) => void;
   setRestaurantInfo: (info: RestaurantInfo) => void;
   onAddMenuItem: (item: Omit<MenuItem, 'id'>) => void;
@@ -18,6 +19,9 @@ interface MenuManagementProps {
   onDeleteCategory: (id: string) => void;
   onAddTable: (name: string) => void;
   onDeleteTable: (id: string) => void;
+  onAddAddon: (addon: Addon) => void;
+  onUpdateAddon: (addon: Addon) => void;
+  onDeleteAddon: (id: string) => void;
   onResetMenuDatabase?: () => void;
 }
 
@@ -27,6 +31,7 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
   taxRate,
   restaurantInfo,
   tables,
+  addons,
   setTaxRate,
   setRestaurantInfo,
   onAddMenuItem, 
@@ -37,16 +42,26 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
   onDeleteCategory,
   onAddTable,
   onDeleteTable,
+  onAddAddon,
+  onUpdateAddon,
+  onDeleteAddon,
   onResetMenuDatabase
 }) => {
-  const [activeTab, setActiveTab] = useState<'ITEMS' | 'CATEGORIES' | 'TABLES' | 'TAXES' | 'RESTAURANT' | 'DATABASE'>('ITEMS');
+  const [activeTab, setActiveTab] = useState<'ITEMS' | 'CATEGORIES' | 'ADDONS' | 'TABLES' | 'TAXES' | 'RESTAURANT' | 'DATABASE'>('ITEMS');
   const [searchTerm, setSearchTerm] = useState('');
   const [newTableName, setNewTableName] = useState('');
   
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
+  const [isAddonModalOpen, setIsAddonModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [editingCat, setEditingCat] = useState<Category | null>(null);
+  const [editingAddon, setEditingAddon] = useState<Addon | null>(null);
+
+  // Addon form state
+  const [newAddonName, setNewAddonName] = useState('');
+  const [newAddonPrice, setNewAddonPrice] = useState('');
+  const [newAddonCategoryId, setNewAddonCategoryId] = useState('');
 
   // Item form state for veg type
   const [itemVegType, setItemVegType] = useState<VegType>('VEG');
@@ -68,6 +83,47 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
     setIsCatModalOpen(true);
   };
 
+  const handleOpenAddonModal = (addon?: Addon) => {
+    if (addon) {
+      setEditingAddon(addon);
+      setNewAddonName(addon.name);
+      setNewAddonPrice(addon.price.toString());
+      setNewAddonCategoryId(addon.categoryId);
+    } else {
+      setEditingAddon(null);
+      setNewAddonName('');
+      setNewAddonPrice('');
+      setNewAddonCategoryId(categories.length > 0 ? categories[0].id : '');
+    }
+    setIsAddonModalOpen(true);
+  };
+
+  const handleSaveAddon = () => {
+    if (!newAddonName.trim() || !newAddonPrice || !newAddonCategoryId) {
+      alert('Please fill all fields');
+      return;
+    }
+    
+    const addonData: Addon = {
+      id: editingAddon?.id || `addon_${Date.now()}`,
+      name: newAddonName.trim(),
+      price: parseFloat(newAddonPrice),
+      categoryId: newAddonCategoryId
+    };
+
+    if (editingAddon) {
+      onUpdateAddon(addonData);
+    } else {
+      onAddAddon(addonData);
+    }
+
+    setIsAddonModalOpen(false);
+    setEditingAddon(null);
+    setNewAddonName('');
+    setNewAddonPrice('');
+    setNewAddonCategoryId('');
+  };
+
   const handleSaveRestaurantProfile = (e: React.FormEvent) => {
     e.preventDefault();
     setRestaurantInfo(localRestaurantInfo);
@@ -81,12 +137,16 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
           <h1 className="text-2xl font-black text-gray-900">Configuration</h1>
           <p className="text-sm text-gray-800 font-bold">Manage your menu, categories, and business rules</p>
         </div>
-        {(activeTab === 'ITEMS' || activeTab === 'CATEGORIES') && (
+        {(activeTab === 'ITEMS' || activeTab === 'CATEGORIES' || activeTab === 'ADDONS') && (
           <button 
-            onClick={() => activeTab === 'ITEMS' ? handleOpenItemModal() : handleOpenCatModal()}
+            onClick={() => {
+              if (activeTab === 'ITEMS') handleOpenItemModal();
+              else if (activeTab === 'CATEGORIES') handleOpenCatModal();
+              else if (activeTab === 'ADDONS') handleOpenAddonModal();
+            }}
             className="flex items-center gap-2 bg-[#F57C00] text-white px-6 py-2.5 rounded-xl font-black hover:bg-orange-600 transition-all shadow-lg shadow-orange-200"
           >
-            <Plus size={20} /> Add New {activeTab === 'ITEMS' ? 'Item' : 'Category'}
+            <Plus size={20} /> Add New {activeTab === 'ITEMS' ? 'Item' : activeTab === 'CATEGORIES' ? 'Category' : 'Addon'}
           </button>
         )}
       </div>
@@ -95,6 +155,7 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
         <div className="flex border-b overflow-x-auto custom-scrollbar bg-gray-50/50">
           <TabItem label="Menu Items" active={activeTab === 'ITEMS'} onClick={() => setActiveTab('ITEMS')} icon={<Utensils size={18} />} />
           <TabItem label="Categories" active={activeTab === 'CATEGORIES'} onClick={() => setActiveTab('CATEGORIES')} icon={<Tag size={18} />} />
+          <TabItem label="Addons" active={activeTab === 'ADDONS'} onClick={() => setActiveTab('ADDONS')} icon={<Package size={18} />} />
           <TabItem label="Tables" active={activeTab === 'TABLES'} onClick={() => setActiveTab('TABLES')} icon={<LayoutGrid size={18} />} />
           <TabItem label="Taxes & Charges" active={activeTab === 'TAXES'} onClick={() => setActiveTab('TAXES')} icon={<Percent size={18} />} />
           <TabItem label="Restaurant Profile" active={activeTab === 'RESTAURANT'} onClick={() => setActiveTab('RESTAURANT')} icon={<Store size={18} />} />
@@ -173,6 +234,58 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {activeTab === 'ADDONS' && (
+            <div className="space-y-6">
+              {/* Group addons by category */}
+              {categories.map(cat => {
+                const categoryAddons = addons.filter(a => a.categoryId === cat.id);
+                if (categoryAddons.length === 0) return null;
+                
+                return (
+                  <div key={cat.id} className="bg-white border-2 border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
+                      <h3 className="font-black text-gray-900">{cat.name}</h3>
+                      <p className="text-xs text-gray-500 font-bold">{categoryAddons.length} addon(s)</p>
+                    </div>
+                    <div className="p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {categoryAddons.map(addon => (
+                          <div key={addon.id} className="p-4 border-2 border-gray-200 bg-gray-50 rounded-xl flex items-center justify-between hover:border-[#F57C00] group transition-all">
+                            <div>
+                              <span className="font-black text-gray-900">{addon.name}</span>
+                              <span className="ml-3 text-orange-600 font-black">₹{addon.price}</span>
+                            </div>
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => handleOpenAddonModal(addon)} className="p-2 text-gray-900 hover:text-[#F57C00]"><Edit2 size={14} /></button>
+                              <button onClick={() => onDeleteAddon(addon.id)} className="p-2 text-gray-900 hover:text-red-500"><Trash2 size={14} /></button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Show categories with no addons */}
+              {addons.length === 0 && (
+                <div className="text-center py-12 text-gray-500">
+                  <Package size={48} className="mx-auto mb-4 opacity-50" />
+                  <p className="font-black">No addons configured yet</p>
+                  <p className="text-sm">Click "Add New Addon" to create category-specific addons</p>
+                </div>
+              )}
+
+              {/* Quick info about addons */}
+              <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                <p className="text-sm text-blue-800 font-bold">
+                  <strong>💡 Tip:</strong> Addons are category-specific extras that customers can add to their order. 
+                  When selecting an item from a category with addons, customers will see these addon options along with veg/non-veg choice.
+                </p>
+              </div>
             </div>
           )}
 
@@ -395,6 +508,73 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
           )}
         </div>
       </div>
+
+      {/* Addon Modal */}
+      {isAddonModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 border-2 border-gray-100">
+            <div className="bg-gray-50 p-6 border-b-2 border-gray-200 flex justify-between items-center">
+              <h3 className="text-2xl font-black text-gray-900">{editingAddon ? 'Edit' : 'Add'} Addon</h3>
+              <button onClick={() => setIsAddonModalOpen(false)} className="text-gray-900 hover:text-[#F57C00] transition-colors"><X size={28} /></button>
+            </div>
+            <div className="p-6 space-y-5">
+              <div>
+                <label className="block text-sm font-black text-gray-900 mb-2 uppercase">Addon Name *</label>
+                <input 
+                  type="text"
+                  value={newAddonName}
+                  onChange={(e) => setNewAddonName(e.target.value)}
+                  placeholder="e.g., Extra Cheese"
+                  className="w-full p-4 rounded-xl border-2 border-gray-300 text-gray-900 font-black focus:ring-2 focus:ring-[#F57C00] outline-none shadow-inner placeholder:text-gray-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-black text-gray-900 mb-2 uppercase">Price (₹) *</label>
+                <input 
+                  type="number"
+                  value={newAddonPrice}
+                  onChange={(e) => setNewAddonPrice(e.target.value)}
+                  placeholder="e.g., 30"
+                  min="0"
+                  step="1"
+                  className="w-full p-4 rounded-xl border-2 border-gray-300 text-gray-900 font-black focus:ring-2 focus:ring-[#F57C00] outline-none shadow-inner placeholder:text-gray-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-black text-gray-900 mb-2 uppercase">Apply to Category *</label>
+                <select
+                  value={newAddonCategoryId}
+                  onChange={(e) => setNewAddonCategoryId(e.target.value)}
+                  className="w-full p-4 rounded-xl border-2 border-gray-300 text-gray-900 font-black focus:ring-2 focus:ring-[#F57C00] outline-none shadow-inner bg-white"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-2">This addon will appear only for items in the selected category</p>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button 
+                  type="button"
+                  onClick={() => setIsAddonModalOpen(false)}
+                  className="flex-1 py-4 rounded-xl border-2 border-gray-300 text-gray-900 font-black hover:bg-gray-100 transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button"
+                  onClick={handleSaveAddon}
+                  disabled={!newAddonName.trim() || !newAddonPrice || !newAddonCategoryId}
+                  className="flex-1 py-4 bg-[#F57C00] text-white rounded-xl font-black hover:bg-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <Save size={20} /> {editingAddon ? 'Update' : 'Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Item Modal */}
       {isItemModalOpen && (
