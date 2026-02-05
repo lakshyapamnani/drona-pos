@@ -597,9 +597,16 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
                   ? (vegPrice || 0) // Default to veg price
                   : parseFloat(formData.get('price') as string);
                 
-                const categoryId = formData.get('categoryId') as string;
+                // Use the controlled state value for categoryId
+                const categoryId = itemCategoryId;
                 console.log('MenuManagement - Saving item with categoryId:', categoryId);
+                console.log('MenuManagement - itemCategoryId state:', itemCategoryId);
                 console.log('MenuManagement - Available categories:', categories.map(c => ({ id: c.id, name: c.name })));
+                
+                if (!categoryId) {
+                  alert('Please select a category');
+                  return;
+                }
                 
                 const itemData = {
                   name: formData.get('name') as string,
