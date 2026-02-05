@@ -355,15 +355,27 @@ const App: React.FC = () => {
   };
 
   const handleAddMenuItem = async (item: Omit<MenuItem, 'id'>) => {
+    // Validate required fields - categoryId is essential for items to show on billing screen
+    if (!item.categoryId || typeof item.categoryId !== 'string') {
+      console.error("App.tsx - Invalid menu item: missing or invalid categoryId", item);
+      alert("Please select a category for the menu item. Items without a category won't appear on the billing screen.");
+      return;
+    }
+    
     const newId = Math.random().toString(36).substr(2, 9);
     
-    // Clean the item - remove undefined values (Firebase doesn't accept undefined)
-    const cleanItem: Record<string, any> = { id: newId };
-    Object.entries(item).forEach(([key, value]) => {
-      if (value !== undefined) {
-        cleanItem[key] = value;
-      }
-    });
+    // Build clean item - Firebase doesn't accept undefined; ensure categoryId is always included
+    const cleanItem: Record<string, unknown> = {
+      id: newId,
+      name: item.name ?? '',
+      price: Number(item.price) || 0,
+      categoryId: item.categoryId,
+      isVeg: Boolean(item.isVeg),
+      vegType: item.vegType ?? 'VEG',
+    };
+    if (item.vegPrice !== undefined && item.vegPrice !== null) cleanItem.vegPrice = item.vegPrice;
+    if (item.nonVegPrice !== undefined && item.nonVegPrice !== null) cleanItem.nonVegPrice = item.nonVegPrice;
+    if (item.image) cleanItem.image = item.image;
     
     console.log("App.tsx - Adding menu item:", cleanItem);
     try {
@@ -371,7 +383,7 @@ const App: React.FC = () => {
       console.log("App.tsx - Menu item saved successfully to Firebase");
     } catch (error) {
       console.error("Firebase Sync Error (Add Item):", error);
-      alert("Failed to save menu item: " + error);
+      alert("Failed to save menu item: " + (error instanceof Error ? error.message : String(error)));
     }
   };
 

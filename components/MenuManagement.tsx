@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Search, Save, X, Utensils, Tag, Store, Percent, LayoutGrid, RefreshCw, Database, Package } from 'lucide-react';
 import { MenuItem, Category, RestaurantInfo, Table, VegType, Addon } from '../types';
 
@@ -74,12 +74,24 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
   );
 
   const handleOpenItemModal = (item?: MenuItem) => {
+    if (!item && categories.length === 0) {
+      alert('Please add at least one category first. Menu items need a category to appear on the billing screen.');
+      return;
+    }
     setEditingItem(item || null);
     setItemVegType(item?.vegType || 'VEG');
-    // Set the category - use item's category if editing, otherwise use first category
-    setItemCategoryId(item?.categoryId || categories[0]?.id || '');
+    // Set the category - use item's category if editing, otherwise use first category (required for billing screen)
+    const defaultCatId = categories.length > 0 ? categories[0].id : '';
+    setItemCategoryId(item?.categoryId || defaultCatId);
     setIsItemModalOpen(true);
   };
+
+  // Sync category selection when categories load (e.g. from Firebase) while add-item modal is open
+  useEffect(() => {
+    if (isItemModalOpen && !editingItem && categories.length > 0 && !itemCategoryId) {
+      setItemCategoryId(categories[0].id);
+    }
+  }, [isItemModalOpen, editingItem, categories, itemCategoryId]);
 
   const handleOpenCatModal = (cat?: Category) => {
     setEditingCat(cat || null);
@@ -597,9 +609,16 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
                   ? (vegPrice || 0) // Default to veg price
                   : parseFloat(formData.get('price') as string);
                 
-                const categoryId = formData.get('categoryId') as string;
+                // Use the controlled state value for categoryId
+                const categoryId = itemCategoryId;
                 console.log('MenuManagement - Saving item with categoryId:', categoryId);
+                console.log('MenuManagement - itemCategoryId state:', itemCategoryId);
                 console.log('MenuManagement - Available categories:', categories.map(c => ({ id: c.id, name: c.name })));
+                
+                if (!categoryId) {
+                  alert('Please select a category');
+                  return;
+                }
                 
                 const itemData = {
                   name: formData.get('name') as string,
