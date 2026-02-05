@@ -36,9 +36,23 @@ export interface Category {
   name: string;
 }
 
+export interface Addon {
+  id: string;
+  name: string;
+  price: number;
+  categoryId: string; // Which category this addon applies to
+}
+
+export interface SelectedAddon {
+  id: string;
+  name: string;
+  price: number;
+}
+
 export interface CartItem extends MenuItem {
   quantity: number;
   selectedVegChoice?: 'VEG' | 'NON_VEG';
+  selectedAddons?: SelectedAddon[];
 }
 
 export interface Order {

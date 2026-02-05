@@ -30,7 +30,8 @@ import {
   Order, 
   OrderStatus, 
   RestaurantInfo,
-  Table
+  Table,
+  Addon
 } from './types';
 import { 
   INITIAL_CATEGORIES, 
@@ -89,6 +90,10 @@ const App: React.FC = () => {
       { id: 't5', name: 'T-5', status: 'AVAILABLE' },
       { id: 't6', name: 'T-6', status: 'AVAILABLE' },
     ];
+  });
+  const [addons, setAddons] = useState<Addon[]>(() => {
+    const saved = localStorage.getItem('drona_addons');
+    return saved ? JSON.parse(saved) : [];
   });
   const [tableCarts, setTableCarts] = useState<Record<string, { items: any[]; customerName: string }>>(() => {
     const saved = localStorage.getItem('drona_table_carts');
@@ -232,6 +237,20 @@ const App: React.FC = () => {
       }
     });
 
+    // Addons Sync
+    const addonsRef = ref(db, 'addons');
+    const unsubscribeAddons = onValue(addonsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const addonArray = Object.values(data) as Addon[];
+        setAddons(addonArray);
+        localStorage.setItem('drona_addons', JSON.stringify(addonArray));
+      } else {
+        setAddons([]);
+        localStorage.setItem('drona_addons', JSON.stringify([]));
+      }
+    });
+
     // Table Carts Sync (for pending orders on tables)
     const tableCartsRef = ref(db, 'table_carts');
     const unsubscribeTableCarts = onValue(tableCartsRef, (snapshot) => {
@@ -251,6 +270,7 @@ const App: React.FC = () => {
       unsubscribeOrders();
       unsubscribeSettings();
       unsubscribeTables();
+      unsubscribeAddons();
       unsubscribeTableCarts();
     };
   }, []);
@@ -384,8 +404,38 @@ const App: React.FC = () => {
       for (const item of itemsToDelete) {
         await set(ref(db, `menu_items/${item.id}`), null);
       }
+      // Also delete addons linked to this category
+      const addonsToDelete = addons.filter(a => a.categoryId === id);
+      for (const addon of addonsToDelete) {
+        await set(ref(db, `addons/${addon.id}`), null);
+      }
     } catch (error) {
       console.error("Firebase Sync Error (Delete Category):", error);
+    }
+  };
+
+  // Addon Handlers
+  const handleAddAddon = async (addon: Addon) => {
+    try {
+      await set(ref(db, `addons/${addon.id}`), addon);
+    } catch (error) {
+      console.error("Firebase Sync Error (Add Addon):", error);
+    }
+  };
+
+  const handleUpdateAddon = async (addon: Addon) => {
+    try {
+      await set(ref(db, `addons/${addon.id}`), addon);
+    } catch (error) {
+      console.error("Firebase Sync Error (Update Addon):", error);
+    }
+  };
+
+  const handleDeleteAddon = async (id: string) => {
+    try {
+      await set(ref(db, `addons/${id}`), null);
+    } catch (error) {
+      console.error("Firebase Sync Error (Delete Addon):", error);
     }
   };
 
@@ -458,6 +508,7 @@ const App: React.FC = () => {
             restaurantInfo={restaurantInfo}
             tables={tables}
             tableCarts={tableCarts}
+            addons={addons}
             onCreateOrder={handleCreateOrder}
             onUpdateTableStatus={handleUpdateTableStatus}
             onUpdateTableCarts={handleUpdateTableCarts}
@@ -519,6 +570,7 @@ const App: React.FC = () => {
             taxRate={taxRate}
             restaurantInfo={restaurantInfo}
             tables={tables}
+            addons={addons}
             setTaxRate={handleSaveTaxRate}
             setRestaurantInfo={handleSaveRestaurantInfo}
             onAddMenuItem={handleAddMenuItem}
@@ -529,11 +581,14 @@ const App: React.FC = () => {
             onDeleteCategory={handleDeleteCategory}
             onAddTable={handleAddTable}
             onDeleteTable={handleDeleteTable}
+            onAddAddon={handleAddAddon}
+            onUpdateAddon={handleUpdateAddon}
+            onDeleteAddon={handleDeleteAddon}
             onResetMenuDatabase={handleResetMenuDatabase}
           />
         );
       default:
-        return <BillingScreen categories={categories} menuItems={menuItems} taxRate={taxRate} restaurantInfo={restaurantInfo} tables={tables} tableCarts={tableCarts} onCreateOrder={handleCreateOrder} onUpdateTableStatus={handleUpdateTableStatus} onUpdateTableCarts={handleUpdateTableCarts} />;
+        return <BillingScreen categories={categories} menuItems={menuItems} taxRate={taxRate} restaurantInfo={restaurantInfo} tables={tables} tableCarts={tableCarts} addons={addons} onCreateOrder={handleCreateOrder} onUpdateTableStatus={handleUpdateTableStatus} onUpdateTableCarts={handleUpdateTableCarts} />;
     }
   };
 
@@ -737,6 +792,18 @@ const App: React.FC = () => {
             <div className="hidden md:flex items-center gap-2">
                <span className="text-[#F57C00] font-bold text-lg">DRONA</span>
                <div className="h-6 w-px bg-gray-200 mx-2"></div>
+               <button
+                 onClick={() => setActiveScreen('BILLING')}
+                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-black text-sm transition-all ${
+                   activeScreen === 'BILLING' 
+                     ? 'bg-[#F57C00] text-white shadow-lg shadow-orange-200' 
+                     : 'bg-gray-100 text-gray-700 hover:bg-orange-50 hover:text-[#F57C00]'
+                 }`}
+               >
+                 <Receipt size={16} />
+                 <span>Billing</span>
+               </button>
+               <div className="h-6 w-px bg-gray-200 mx-1"></div>
                <div className="flex items-center gap-2 bg-gray-50 px-3 py-1 rounded-full border">
                  {isOnline ? (
                    <div className="flex items-center gap-1.5 text-green-600">

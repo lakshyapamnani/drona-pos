@@ -40,19 +40,22 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   
+  // Ensure orders is always an array
+  const safeOrders = orders || [];
+  
   const todayDate = new Date().toLocaleDateString();
 
   const { todayOrders, allOrders } = useMemo(() => {
     return {
-      todayOrders: orders.filter(o => o.date === todayDate),
-      allOrders: orders
+      todayOrders: safeOrders.filter(o => o.date === todayDate),
+      allOrders: safeOrders
     };
-  }, [orders, todayDate]);
+  }, [safeOrders, todayDate]);
 
   const displayedOrders = useMemo(() => {
     const list = isAllBillsView 
       ? (activeTab === 'TODAY' ? todayOrders : allOrders) 
-      : orders;
+      : safeOrders;
     
     if (!searchQuery.trim()) return list;
     
@@ -60,7 +63,16 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
       o.billNo.toLowerCase().includes(searchQuery.toLowerCase()) || 
       o.customerName?.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [isAllBillsView, activeTab, todayOrders, allOrders, orders, searchQuery]);
+  }, [isAllBillsView, activeTab, todayOrders, allOrders, safeOrders, searchQuery]);
+
+  // Calculate total sale for displayed orders
+  const totalSale = useMemo(() => {
+    return displayedOrders.reduce((sum, order) => sum + (order.subtotal || 0), 0);
+  }, [displayedOrders]);
+
+  const totalRevenue = useMemo(() => {
+    return displayedOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+  }, [displayedOrders]);
 
   const printReceipt = (order: Order) => {
     const printWindow = window.open('', '_blank');
@@ -136,9 +148,12 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
   };
 
   const exportToPDF = (data: Order[], subTitle: string) => {
-    if (data.length === 0) return;
+    if (!data || data.length === 0) return;
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
+
+    const pdfTotalSale = data.reduce((sum, o) => sum + (o.subtotal || 0), 0);
+    const pdfTotalRevenue = data.reduce((sum, o) => sum + (o.total || 0), 0);
 
     const html = `
       <html>
@@ -148,6 +163,11 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
             body { font-family: sans-serif; padding: 20px; }
             h1 { color: #F57C00; margin-bottom: 5px; }
             h2 { color: #333; margin-top: 0; font-size: 18px; }
+            .summary { display: flex; gap: 30px; margin: 20px 0; padding: 15px; background: #f9f9f9; border-radius: 8px; }
+            .summary-item { text-align: center; }
+            .summary-label { font-size: 11px; color: #666; text-transform: uppercase; font-weight: bold; }
+            .summary-value { font-size: 20px; font-weight: bold; color: #F57C00; }
+            .summary-value.green { color: #16a34a; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 11px; }
             th { background-color: #f2f2f2; }
@@ -157,6 +177,20 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
           <h1>DRONA POS</h1>
           <h2>${title} (${subTitle})</h2>
           <p>Generated: ${new Date().toLocaleString()}</p>
+          <div class="summary">
+            <div class="summary-item">
+              <div class="summary-label">Total Orders</div>
+              <div class="summary-value">${data.length}</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">Total Sale</div>
+              <div class="summary-value green">₹${pdfTotalSale.toFixed(2)}</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">Total Revenue</div>
+              <div class="summary-value">₹${pdfTotalRevenue.toFixed(2)}</div>
+            </div>
+          </div>
           <table>
             <thead>
               <tr>
@@ -175,9 +209,9 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
                   <td>${o.billNo}</td>
                   <td>${o.customerName || '-'}</td>
                   <td>${o.time}</td>
-                  <td>${o.items.map(i => i.name + ' x ' + i.quantity).join(', ')}</td>
+                  <td>${(o.items || []).map(i => i.name + ' x ' + i.quantity).join(', ')}</td>
                   <td>${o.orderType}</td>
-                  <td>₹${o.total.toFixed(2)}</td>
+                  <td>₹${(o.total || 0).toFixed(2)}</td>
                   <td>${o.status}</td>
                 </tr>
               `).join('')}
@@ -261,7 +295,7 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
                      )}
                    </div>
                 </td>
-                <td className="px-6 py-4 font-black text-gray-900">₹{order.total.toFixed(0)}</td>
+                <td className="px-6 py-4 font-black text-gray-900">₹{(order.total || 0).toFixed(0)}</td>
                 <td className="px-6 py-4">
                   <StatusBadge status={order.status} />
                 </td>
@@ -326,7 +360,19 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
             {isAllBillsView ? 'Transaction History' : 'Status-specific records'}
           </p>
         </div>
-        <div className="flex gap-2 md:gap-3">
+        <div className="flex gap-2 md:gap-3 items-center">
+           {/* Total Sale Summary */}
+           <div className="hidden md:flex items-center gap-4 bg-white border rounded-xl px-4 py-2">
+             <div className="text-center">
+               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Sale</p>
+               <p className="text-sm font-black text-green-600">₹{totalSale.toFixed(0)}</p>
+             </div>
+             <div className="w-px h-8 bg-gray-200" />
+             <div className="text-center">
+               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Revenue</p>
+               <p className="text-sm font-black text-[#F57C00]">₹{totalRevenue.toFixed(0)}</p>
+             </div>
+           </div>
            <div className="relative flex-1 md:flex-none">
              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
              <input 
@@ -343,6 +389,21 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
            >
              <FileText size={16} /> <span className="hidden sm:inline">Export</span>
            </button>
+        </div>
+      </div>
+
+      {/* Mobile Total Sale Summary */}
+      <div className="md:hidden px-4 pb-2">
+        <div className="flex items-center justify-center gap-4 bg-white border rounded-xl px-4 py-2">
+          <div className="text-center">
+            <p className="text-[10px] font-bold text-gray-400 uppercase">Total Sale</p>
+            <p className="text-sm font-black text-green-600">₹{totalSale.toFixed(0)}</p>
+          </div>
+          <div className="w-px h-8 bg-gray-200" />
+          <div className="text-center">
+            <p className="text-[10px] font-bold text-gray-400 uppercase">Total Revenue</p>
+            <p className="text-sm font-black text-[#F57C00]">₹{totalRevenue.toFixed(0)}</p>
+          </div>
         </div>
       </div>
 
@@ -391,7 +452,7 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
                     )}
                   </div>
                   <div className="text-right">
-                    <span className="font-black text-[#F57C00] text-lg">₹{order.total.toFixed(0)}</span>
+                    <span className="font-black text-[#F57C00] text-lg">₹{(order.total || 0).toFixed(0)}</span>
                     <p className="text-[10px] text-gray-400">{order.date}</p>
                   </div>
                 </div>
@@ -513,16 +574,16 @@ const OrdersList: React.FC<OrdersListProps> = ({ title, orders, onUpdateStatus, 
               <div className="bg-gray-900 text-white p-6 rounded-3xl space-y-3">
                 <div className="flex justify-between text-xs text-gray-400 font-bold uppercase">
                   <span>Subtotal</span>
-                  <span>₹{selectedOrder.subtotal.toFixed(2)}</span>
+                  <span>₹{(selectedOrder.subtotal || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-gray-400 font-bold uppercase">
-                  <span>Tax (${(taxRate * 100).toFixed(0)}%)</span>
-                  <span>₹{selectedOrder.tax.toFixed(2)}</span>
+                  <span>Tax ({((taxRate || 0) * 100).toFixed(0)}%)</span>
+                  <span>₹{(selectedOrder.tax || 0).toFixed(2)}</span>
                 </div>
                 <div className="border-t border-gray-800 pt-3 flex justify-between items-center">
                   <div>
                     <span className="text-xs font-black text-[#F57C00] uppercase tracking-widest">Total Amount</span>
-                    <h3 className="text-2xl font-black">₹{selectedOrder.total.toFixed(0)}</h3>
+                    <h3 className="text-2xl font-black">₹{(selectedOrder.total || 0).toFixed(0)}</h3>
                   </div>
                   <div className="text-right">
                     <div className="flex items-center gap-2 justify-end text-xs font-black uppercase tracking-widest mb-1">
