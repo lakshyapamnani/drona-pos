@@ -17,45 +17,150 @@ import {
   Users,
   X
 } from 'lucide-react';
-import { Category, MenuItem, CartItem, OrderType, PaymentMode, Order, RestaurantInfo, Table } from '../types';
+import { Category, MenuItem, CartItem, OrderType, PaymentMode, Order, RestaurantInfo, Table, Addon, SelectedAddon } from '../types';
 
-interface VegChoicePopupProps {
+interface ItemOptionsPopupProps {
   item: MenuItem;
-  onSelect: (choice: 'VEG' | 'NON_VEG') => void;
+  categoryAddons: Addon[];
+  onConfirm: (choice: 'VEG' | 'NON_VEG' | null, selectedAddons: SelectedAddon[]) => void;
   onClose: () => void;
 }
 
-const VegChoicePopup: React.FC<VegChoicePopupProps> = ({ item, onSelect, onClose }) => (
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-    <div className="bg-white rounded-2xl p-6 w-80 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="font-black text-lg text-gray-900">Choose Option</h3>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-          <X size={20} />
-        </button>
-      </div>
-      <p className="text-sm text-gray-600 mb-4 font-medium">{item.name}</p>
-      <div className="flex gap-3">
-        <button
-          onClick={() => onSelect('VEG')}
-          className="flex-1 py-4 bg-green-500 hover:bg-green-600 text-white rounded-xl font-black transition-all flex flex-col items-center gap-1 shadow-lg shadow-green-200"
-        >
-          <span className="w-4 h-4 rounded-full bg-white border-2 border-green-700"></span>
-          <span>Veg</span>
-          <span className="text-sm opacity-90">₹{item.vegPrice}</span>
-        </button>
-        <button
-          onClick={() => onSelect('NON_VEG')}
-          className="flex-1 py-4 bg-red-500 hover:bg-red-600 text-white rounded-xl font-black transition-all flex flex-col items-center gap-1 shadow-lg shadow-red-200"
-        >
-          <span className="w-4 h-4 rounded-full bg-white border-2 border-red-700"></span>
-          <span>Non-Veg</span>
-          <span className="text-sm opacity-90">₹{item.nonVegPrice}</span>
-        </button>
+const ItemOptionsPopup: React.FC<ItemOptionsPopupProps> = ({ item, categoryAddons, onConfirm, onClose }) => {
+  const [vegChoice, setVegChoice] = useState<'VEG' | 'NON_VEG' | null>(item.vegType === 'BOTH' ? null : null);
+  const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
+
+  const toggleAddon = (addon: Addon) => {
+    const exists = selectedAddons.find(a => a.id === addon.id);
+    if (exists) {
+      setSelectedAddons(selectedAddons.filter(a => a.id !== addon.id));
+    } else {
+      setSelectedAddons([...selectedAddons, { id: addon.id, name: addon.name, price: addon.price }]);
+    }
+  };
+
+  const handleConfirm = () => {
+    // For BOTH type items, veg choice is required
+    if (item.vegType === 'BOTH' && !vegChoice) {
+      return;
+    }
+    onConfirm(vegChoice, selectedAddons);
+  };
+
+  // Calculate total price
+  const basePrice = item.vegType === 'BOTH' 
+    ? (vegChoice === 'VEG' ? item.vegPrice : vegChoice === 'NON_VEG' ? item.nonVegPrice : 0) 
+    : item.price;
+  const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0);
+  const totalPrice = (basePrice || 0) + addonsTotal;
+
+  // If no options needed (not BOTH and no addons), auto-confirm
+  useEffect(() => {
+    if (item.vegType !== 'BOTH' && categoryAddons.length === 0) {
+      onConfirm(null, []);
+    }
+  }, []);
+
+  // Only show popup if there are options to select
+  if (item.vegType !== 'BOTH' && categoryAddons.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-2xl p-6 w-96 max-h-[80vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="font-black text-lg text-gray-900">Customize Order</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X size={20} />
+          </button>
+        </div>
+        <p className="text-sm text-gray-600 mb-4 font-medium">{item.name}</p>
+        
+        {/* Veg/Non-Veg Choice - only for BOTH type */}
+        {item.vegType === 'BOTH' && (
+          <div className="mb-5">
+            <label className="block text-xs font-black text-gray-500 mb-2 uppercase">Choose Type *</label>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setVegChoice('VEG')}
+                className={`flex-1 py-3 rounded-xl font-black transition-all flex flex-col items-center gap-1 border-2 ${
+                  vegChoice === 'VEG' 
+                    ? 'bg-green-500 text-white border-green-500 shadow-lg shadow-green-200' 
+                    : 'bg-white text-gray-700 border-gray-300 hover:border-green-400'
+                }`}
+              >
+                <span className={`w-3 h-3 rounded-full ${vegChoice === 'VEG' ? 'bg-white' : 'bg-green-500'}`}></span>
+                <span className="text-sm">Veg</span>
+                <span className="text-xs opacity-80">₹{item.vegPrice}</span>
+              </button>
+              <button
+                onClick={() => setVegChoice('NON_VEG')}
+                className={`flex-1 py-3 rounded-xl font-black transition-all flex flex-col items-center gap-1 border-2 ${
+                  vegChoice === 'NON_VEG' 
+                    ? 'bg-red-500 text-white border-red-500 shadow-lg shadow-red-200' 
+                    : 'bg-white text-gray-700 border-gray-300 hover:border-red-400'
+                }`}
+              >
+                <span className={`w-3 h-3 rounded-full ${vegChoice === 'NON_VEG' ? 'bg-white' : 'bg-red-500'}`}></span>
+                <span className="text-sm">Non-Veg</span>
+                <span className="text-xs opacity-80">₹{item.nonVegPrice}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Addons Section */}
+        {categoryAddons.length > 0 && (
+          <div className="mb-5">
+            <label className="block text-xs font-black text-gray-500 mb-2 uppercase">Add-ons (Optional)</label>
+            <div className="space-y-2">
+              {categoryAddons.map(addon => {
+                const isSelected = selectedAddons.some(a => a.id === addon.id);
+                return (
+                  <button
+                    key={addon.id}
+                    onClick={() => toggleAddon(addon)}
+                    className={`w-full p-3 rounded-xl font-bold transition-all flex items-center justify-between border-2 ${
+                      isSelected 
+                        ? 'bg-orange-50 border-[#F57C00] text-gray-900' 
+                        : 'bg-white border-gray-200 text-gray-700 hover:border-orange-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                        isSelected ? 'bg-[#F57C00] border-[#F57C00]' : 'border-gray-300'
+                      }`}>
+                        {isSelected && <CheckCircle size={14} className="text-white" />}
+                      </div>
+                      <span>{addon.name}</span>
+                    </div>
+                    <span className="text-[#F57C00] font-black">+₹{addon.price}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Total and Confirm */}
+        <div className="border-t pt-4">
+          <div className="flex justify-between items-center mb-4">
+            <span className="font-bold text-gray-600">Total:</span>
+            <span className="text-xl font-black text-[#F57C00]">₹{totalPrice}</span>
+          </div>
+          <button
+            onClick={handleConfirm}
+            disabled={item.vegType === 'BOTH' && !vegChoice}
+            className="w-full py-4 bg-[#F57C00] hover:bg-orange-600 text-white rounded-xl font-black transition-all shadow-lg shadow-orange-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Add to Cart
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 interface TableCart {
   items: CartItem[];
@@ -69,6 +174,7 @@ interface BillingScreenProps {
   restaurantInfo: RestaurantInfo;
   tables: Table[];
   tableCarts: Record<string, TableCart>;
+  addons: Addon[];
   onCreateOrder: (order: Order) => void;
   onUpdateTableStatus: (tableId: string, status: Table['status'], currentOrderId?: string) => void;
   onUpdateTableCarts: (tableCarts: Record<string, TableCart>) => void;
@@ -81,15 +187,16 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
   restaurantInfo, 
   tables,
   tableCarts,
+  addons,
   onCreateOrder,
   onUpdateTableStatus,
   onUpdateTableCarts
 }) => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(categories[0]?.id || '');
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
-  const [orderType, setOrderType] = useState<OrderType>('DINE_IN');
+  const [orderType, setOrderType] = useState<OrderType>('PICK_UP');
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
-  const [vegChoiceItem, setVegChoiceItem] = useState<MenuItem | null>(null);
+  const [optionsItem, setOptionsItem] = useState<MenuItem | null>(null);
   
   // Get current cart based on selected table or default cart for non-dine-in
   const [defaultCart, setDefaultCart] = useState<CartItem[]>([]);
@@ -134,32 +241,47 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
     return menuItems.filter(item => item.categoryId === selectedCategoryId);
   }, [selectedCategoryId, menuItems]);
 
+  // Get addons for the current category
+  const getCategoryAddons = (categoryId: string) => {
+    return addons.filter(a => a.categoryId === categoryId);
+  };
+
   const handleAddItem = (item: MenuItem) => {
-    // If item has both veg and non-veg options, show popup
-    if (item.vegType === 'BOTH') {
-      setVegChoiceItem(item);
+    const categoryAddons = getCategoryAddons(item.categoryId);
+    
+    // If item has both veg/non-veg options OR has category-specific addons, show popup
+    if (item.vegType === 'BOTH' || categoryAddons.length > 0) {
+      setOptionsItem(item);
       return;
     }
     addToCart(item);
   };
 
-  const handleVegChoice = (choice: 'VEG' | 'NON_VEG') => {
-    if (!vegChoiceItem) return;
-    
-    const price = choice === 'VEG' ? vegChoiceItem.vegPrice! : vegChoiceItem.nonVegPrice!;
-    const modifiedItem: MenuItem = {
-      ...vegChoiceItem,
-      price,
-      isVeg: choice === 'VEG'
-    };
-    
-    addToCart(modifiedItem, choice);
-    setVegChoiceItem(null);
+  const handleItemOptions = (vegChoice: 'VEG' | 'NON_VEG' | null, selectedAddons: SelectedAddon[]) => {
+    if (!optionsItem) return;
+    addToCart(optionsItem, vegChoice, selectedAddons);
+    setOptionsItem(null);
   };
 
-  const addToCart = (item: MenuItem, vegChoice?: 'VEG' | 'NON_VEG') => {
-    // Create unique id for items with veg choice
-    const cartItemId = vegChoice ? `${item.id}-${vegChoice}` : item.id;
+  const addToCart = (item: MenuItem, vegChoice?: 'VEG' | 'NON_VEG' | null, selectedAddons?: SelectedAddon[]) => {
+    // Create unique id for items with veg choice and addons
+    const addonsKey = selectedAddons && selectedAddons.length > 0 
+      ? `-addons-${selectedAddons.map(a => a.id).sort().join('-')}`
+      : '';
+    const cartItemId = vegChoice 
+      ? `${item.id}-${vegChoice}${addonsKey}` 
+      : `${item.id}${addonsKey}`;
+    
+    // Calculate item price with addons
+    let itemPrice = item.price;
+    if (vegChoice === 'VEG' && item.vegPrice) {
+      itemPrice = item.vegPrice;
+    } else if (vegChoice === 'NON_VEG' && item.nonVegPrice) {
+      itemPrice = item.nonVegPrice;
+    }
+    
+    const addonsTotal = selectedAddons ? selectedAddons.reduce((sum, a) => sum + a.price, 0) : 0;
+    const totalItemPrice = itemPrice + addonsTotal;
     
     if (orderType === 'DINE_IN' && selectedTableId) {
       const currentItems = tableCarts[selectedTableId]?.items || [];
@@ -173,7 +295,14 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
       } else {
         updateTableCart(selectedTableId, (cart) => ({
           ...cart,
-          items: [...cart.items, { ...item, id: cartItemId, quantity: 1, selectedVegChoice: vegChoice }]
+          items: [...cart.items, { 
+            ...item, 
+            id: cartItemId, 
+            price: totalItemPrice,
+            quantity: 1, 
+            selectedVegChoice: vegChoice || undefined,
+            selectedAddons: selectedAddons || []
+          }]
         }));
       }
       
@@ -188,7 +317,14 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
         if (existing) {
           return prev.map(i => i.id === cartItemId ? { ...i, quantity: i.quantity + 1 } : i);
         }
-        return [...prev, { ...item, id: cartItemId, quantity: 1, selectedVegChoice: vegChoice }];
+        return [...prev, { 
+          ...item, 
+          id: cartItemId, 
+          price: totalItemPrice,
+          quantity: 1, 
+          selectedVegChoice: vegChoice || undefined,
+          selectedAddons: selectedAddons || []
+        }];
       });
     }
   };
@@ -375,12 +511,13 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Veg Choice Popup */}
-      {vegChoiceItem && (
-        <VegChoicePopup
-          item={vegChoiceItem}
-          onSelect={handleVegChoice}
-          onClose={() => setVegChoiceItem(null)}
+      {/* Item Options Popup (Veg/Non-Veg + Addons) */}
+      {optionsItem && (
+        <ItemOptionsPopup
+          item={optionsItem}
+          categoryAddons={getCategoryAddons(optionsItem.categoryId)}
+          onConfirm={handleItemOptions}
+          onClose={() => setOptionsItem(null)}
         />
       )}
       
@@ -537,7 +674,7 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
               <div key={item.id} className="flex gap-3 items-center group animate-in fade-in slide-in-from-right-2 duration-200">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className={`shrink-0 w-2 h-2 rounded-full ${item.isVeg ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                    <span className={`shrink-0 w-2 h-2 rounded-full ${item.isVeg || item.selectedVegChoice === 'VEG' ? 'bg-green-500' : 'bg-red-500'}`}></span>
                     <h4 className="font-bold text-gray-800 truncate text-sm">
                       {item.name}
                       {item.selectedVegChoice && (
@@ -547,6 +684,11 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
                       )}
                     </h4>
                   </div>
+                  {item.selectedAddons && item.selectedAddons.length > 0 && (
+                    <p className="text-[10px] text-orange-600 font-bold">
+                      + {item.selectedAddons.map(a => a.name).join(', ')}
+                    </p>
+                  )}
                   <p className="text-[11px] text-gray-500 font-medium">₹{item.price} per unit</p>
                 </div>
                 <div className="flex items-center gap-2 bg-gray-50 border rounded-xl p-1 shadow-sm">
