@@ -253,7 +253,7 @@ const MenuManagement: React.FC<MenuManagementProps> = ({
           )}
 
           {activeTab === 'ADDONS' && (
-            <div className="space-y-6">
+            <div className="space-y-6 flex-1 overflow-y-auto custom-scrollbar">
               {/* Group addons by category */}
               {categories.map(cat => {
                 const categoryAddons = addons.filter(a => a.categoryId === cat.id);

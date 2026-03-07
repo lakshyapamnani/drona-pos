@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
+import ReactDOMServer from 'react-dom/server';
 import { 
   Plus, 
   Minus, 
@@ -17,7 +18,10 @@ import {
   Users,
   X
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { Category, MenuItem, CartItem, OrderType, PaymentMode, Order, RestaurantInfo, Table, Addon, SelectedAddon } from '../types';
+
+const BILL_UPI_ID = 'lakshaypamnani2@okaxis';
 
 interface ItemOptionsPopupProps {
   item: MenuItem;
@@ -402,6 +406,12 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
+    // Generate UPI QR code SVG
+    const upiUrl = `upi://pay?pa=${BILL_UPI_ID}&pn=${encodeURIComponent(restaurantInfo.name)}&am=${order.total.toFixed(2)}&cu=INR&tn=${encodeURIComponent('Bill ' + order.billNo)}`;
+    const qrSvg = ReactDOMServer.renderToStaticMarkup(
+      React.createElement(QRCodeSVG, { value: upiUrl, size: 120, level: 'H' })
+    );
+
     const html = `
       <html>
         <head>
@@ -457,6 +467,11 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
           <div class="item-row bold total-section"><span>TOTAL:</span><span>₹${order.total.toFixed(0)}</span></div>
           <div class="line"></div>
           <div class="center">Paid via ${order.paymentMode}</div>
+          <div class="center" style="margin-top:10px;">
+            <p style="font-size:10px;font-weight:bold;margin-bottom:5px;">Scan to Pay ₹${order.total.toFixed(0)}</p>
+            <div style="display:inline-block;">${qrSvg}</div>
+            <p style="font-size:9px;margin-top:4px;">UPI: ${BILL_UPI_ID}</p>
+          </div>
           <div class="footer center">
             <p>Thank you!</p>
             <p>Visit again.</p>
