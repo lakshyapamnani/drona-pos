@@ -43,10 +43,12 @@ import Dashboard from './components/Dashboard';
 import OrdersList from './components/OrdersList';
 import Reports from './components/Reports';
 import MenuManagement from './components/MenuManagement';
+import AuthScreen from './components/AuthScreen';
 
 // Firebase imports
-import { db } from './firebase';
+import { db, auth } from './firebase';
 import { ref, onValue, set, push, update } from 'firebase/database';
+import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 
 type ActiveScreen = 
   | 'BILLING' 
@@ -62,6 +64,9 @@ const App: React.FC = () => {
   const [activeScreen, setActiveScreen] = useState<ActiveScreen>('BILLING');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  // Auth state
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   // Check if URL path is /mobile for dedicated mobile view
   const [isMobileRoute, setIsMobileRoute] = useState(() => {
     const path = window.location.pathname.toLowerCase();
@@ -137,39 +142,71 @@ const App: React.FC = () => {
     };
   }, []);
 
+  // Firebase Auth Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      // Clear local storage on logout
+      localStorage.removeItem('drona_categories');
+      localStorage.removeItem('drona_menu_items');
+      localStorage.removeItem('drona_tables');
+      localStorage.removeItem('drona_addons');
+      localStorage.removeItem('drona_table_carts');
+      localStorage.removeItem('drona_tax_rate');
+      localStorage.removeItem('drona_restaurant_info');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  // Helper to get user-scoped Firebase path
+  const userPath = (path: string) => `users/${user?.uid}/${path}`;
+
   // Initialize Firebase with default data if empty (only once, not on every load)
   useEffect(() => {
+    if (!user) return;
     const initializeDatabase = async () => {
       try {
         // Check if menu data already exists in Firebase
-        const categoriesRef = ref(db, 'categories');
+        const categoriesRef = ref(db, userPath('categories'));
         onValue(categoriesRef, async (snapshot) => {
           if (!snapshot.exists()) {
             // Only sync if no data exists
             for (const cat of INITIAL_CATEGORIES) {
-              await set(ref(db, `categories/${cat.id}`), cat);
+              await set(ref(db, userPath(`categories/${cat.id}`)), cat);
             }
             console.log('Categories synced to Firebase');
           }
         }, { onlyOnce: true });
 
-        const menuRef = ref(db, 'menu_items');
+        const menuRef = ref(db, userPath('menu_items'));
         onValue(menuRef, async (snapshot) => {
           if (!snapshot.exists()) {
             for (const item of INITIAL_MENU_ITEMS) {
-              await set(ref(db, `menu_items/${item.id}`), item);
+              await set(ref(db, userPath(`menu_items/${item.id}`)), item);
             }
             console.log('Menu items synced to Firebase');
           }
         }, { onlyOnce: true });
 
-        const settingsRef = ref(db, 'settings');
+        const settingsRef = ref(db, userPath('settings'));
         onValue(settingsRef, async (snapshot) => {
           if (!snapshot.exists()) {
             const savedTax = localStorage.getItem('drona_tax_rate');
             const taxRateVal = savedTax ? parseFloat(savedTax) : INITIAL_TAX_RATE;
-            const savedRestaurant = localStorage.getItem('drona_restaurant_info');
-            const restaurantVal = savedRestaurant ? JSON.parse(savedRestaurant) : { name: 'DRONA POS CAFE', phone: '+91 9876543210', address: '123 Main Street, Food Park, City' };
+            const restaurantVal = { 
+              name: user.displayName || 'DRONA POS CAFE', 
+              phone: '+91 9876543210', 
+              address: '123 Main Street, Food Park, City' 
+            };
             await set(settingsRef, { taxRate: taxRateVal, restaurantInfo: restaurantVal });
             console.log('Settings (taxes, restaurant) synced to Firebase');
           }
@@ -180,12 +217,17 @@ const App: React.FC = () => {
     };
 
     initializeDatabase();
-  }, []);
+  }, [user]);
 
   // Firebase Real-time Listeners
   useEffect(() => {
+    if (!user) {
+      setIsDataLoaded(false);
+      return;
+    }
+
     // Categories Sync
-    const categoriesRef = ref(db, 'categories');
+    const categoriesRef = ref(db, userPath('categories'));
     const unsubscribeCats = onValue(categoriesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -196,7 +238,7 @@ const App: React.FC = () => {
     });
 
     // Menu Items Sync
-    const menuRef = ref(db, 'menu_items');
+    const menuRef = ref(db, userPath('menu_items'));
     const unsubscribeMenu = onValue(menuRef, (snapshot) => {
       const data = snapshot.val();
       console.log("App.tsx - Firebase menu_items listener triggered, data:", data);
@@ -209,7 +251,7 @@ const App: React.FC = () => {
     });
 
     // Orders Sync - Firebase is the single source of truth
-    const ordersRef = ref(db, 'orders');
+    const ordersRef = ref(db, userPath('orders'));
     const unsubscribeOrders = onValue(ordersRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -224,7 +266,7 @@ const App: React.FC = () => {
     });
 
     // Settings Sync
-    const settingsRef = ref(db, 'settings');
+    const settingsRef = ref(db, userPath('settings'));
     const unsubscribeSettings = onValue(settingsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -240,7 +282,7 @@ const App: React.FC = () => {
     });
 
     // Tables Sync
-    const tablesRef = ref(db, 'tables');
+    const tablesRef = ref(db, userPath('tables'));
     const unsubscribeTables = onValue(tablesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -251,7 +293,7 @@ const App: React.FC = () => {
     });
 
     // Addons Sync
-    const addonsRef = ref(db, 'addons');
+    const addonsRef = ref(db, userPath('addons'));
     const unsubscribeAddons = onValue(addonsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -265,7 +307,7 @@ const App: React.FC = () => {
     });
 
     // Table Carts Sync (for pending orders on tables)
-    const tableCartsRef = ref(db, 'table_carts');
+    const tableCartsRef = ref(db, userPath('table_carts'));
     const unsubscribeTableCarts = onValue(tableCartsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -286,7 +328,7 @@ const App: React.FC = () => {
       unsubscribeAddons();
       unsubscribeTableCarts();
     };
-  }, []);
+  }, [user]);
 
   // Action Handlers - Firebase is the single source of truth for orders
   const handleCreateOrder = async (order: Order) => {
@@ -297,7 +339,7 @@ const App: React.FC = () => {
     
     try {
       // Save directly to Firebase - the onValue listener will update local state
-      await set(ref(db, `orders/${order.id}`), cleanOrder);
+      await set(ref(db, userPath(`orders/${order.id}`)), cleanOrder);
       console.log("Order saved to Firebase successfully:", order.id);
     } catch (error) {
       console.error("Firebase Error (Create Order):", error);
@@ -308,7 +350,7 @@ const App: React.FC = () => {
   const handleUpdateOrderStatus = async (orderId: string, status: OrderStatus) => {
     try {
       // Update Firebase directly - the onValue listener will update local state
-      await update(ref(db, `orders/${orderId}`), { status });
+      await update(ref(db, userPath(`orders/${orderId}`)), { status });
     } catch (error) {
       console.error("Firebase Error (Update Status):", error);
     }
@@ -317,7 +359,7 @@ const App: React.FC = () => {
   const handleDeleteOrder = async (orderId: string) => {
     try {
       // Delete from Firebase directly - the onValue listener will update local state
-      await set(ref(db, `orders/${orderId}`), null);
+      await set(ref(db, userPath(`orders/${orderId}`)), null);
     } catch (error) {
       console.error("Firebase Error (Delete Order):", error);
     }
@@ -333,7 +375,7 @@ const App: React.FC = () => {
     localStorage.setItem('drona_tables', JSON.stringify(updatedTables));
 
     try {
-      await set(ref(db, `tables/${newId}`), newTable);
+      await set(ref(db, userPath(`tables/${newId}`)), newTable);
     } catch (error) {
       console.error("Firebase Sync Error (Add Table):", error);
     }
@@ -345,7 +387,7 @@ const App: React.FC = () => {
     localStorage.setItem('drona_tables', JSON.stringify(updatedTables));
 
     try {
-      await set(ref(db, `tables/${tableId}`), null);
+      await set(ref(db, userPath(`tables/${tableId}`)), null);
     } catch (error) {
       console.error("Firebase Sync Error (Delete Table):", error);
     }
@@ -359,7 +401,7 @@ const App: React.FC = () => {
     localStorage.setItem('drona_tables', JSON.stringify(updatedTables));
 
     try {
-      await update(ref(db, `tables/${tableId}`), { status, currentOrderId: currentOrderId || null });
+      await update(ref(db, userPath(`tables/${tableId}`)), { status, currentOrderId: currentOrderId || null });
     } catch (error) {
       console.error("Firebase Sync Error (Update Table):", error);
     }
@@ -390,7 +432,7 @@ const App: React.FC = () => {
     
     console.log("App.tsx - Adding menu item:", cleanItem);
     try {
-      await set(ref(db, `menu_items/${newId}`), cleanItem);
+      await set(ref(db, userPath(`menu_items/${newId}`)), cleanItem);
       console.log("App.tsx - Menu item saved successfully to Firebase");
     } catch (error) {
       console.error("Firebase Sync Error (Add Item):", error);
@@ -409,7 +451,7 @@ const App: React.FC = () => {
     
     console.log("App.tsx - Updating menu item:", cleanItem);
     try {
-      await set(ref(db, `menu_items/${updatedItem.id}`), cleanItem);
+      await set(ref(db, userPath(`menu_items/${updatedItem.id}`)), cleanItem);
       console.log("App.tsx - Menu item updated successfully");
     } catch (error) {
       console.error("Firebase Sync Error (Update Item):", error);
@@ -419,7 +461,7 @@ const App: React.FC = () => {
 
   const handleDeleteMenuItem = async (id: string) => {
     try {
-      await set(ref(db, `menu_items/${id}`), null);
+      await set(ref(db, userPath(`menu_items/${id}`)), null);
     } catch (error) {
       console.error("Firebase Sync Error (Delete Item):", error);
     }
@@ -429,7 +471,7 @@ const App: React.FC = () => {
     const newId = Math.random().toString(36).substr(2, 9);
     const newCat = { id: newId, name };
     try {
-      await set(ref(db, `categories/${newId}`), newCat);
+      await set(ref(db, userPath(`categories/${newId}`)), newCat);
     } catch (error) {
       console.error("Firebase Sync Error (Add Category):", error);
     }
@@ -437,7 +479,7 @@ const App: React.FC = () => {
 
   const handleUpdateCategory = async (updatedCat: Category) => {
     try {
-      await set(ref(db, `categories/${updatedCat.id}`), updatedCat);
+      await set(ref(db, userPath(`categories/${updatedCat.id}`)), updatedCat);
     } catch (error) {
       console.error("Firebase Sync Error (Update Category):", error);
     }
@@ -445,16 +487,16 @@ const App: React.FC = () => {
 
   const handleDeleteCategory = async (id: string) => {
     try {
-      await set(ref(db, `categories/${id}`), null);
+      await set(ref(db, userPath(`categories/${id}`)), null);
       // Also delete items in this category
       const itemsToDelete = menuItems.filter(i => i.categoryId === id);
       for (const item of itemsToDelete) {
-        await set(ref(db, `menu_items/${item.id}`), null);
+        await set(ref(db, userPath(`menu_items/${item.id}`)), null);
       }
       // Also delete addons linked to this category
       const addonsToDelete = addons.filter(a => a.categoryId === id);
       for (const addon of addonsToDelete) {
-        await set(ref(db, `addons/${addon.id}`), null);
+        await set(ref(db, userPath(`addons/${addon.id}`)), null);
       }
     } catch (error) {
       console.error("Firebase Sync Error (Delete Category):", error);
@@ -464,7 +506,7 @@ const App: React.FC = () => {
   // Addon Handlers
   const handleAddAddon = async (addon: Addon) => {
     try {
-      await set(ref(db, `addons/${addon.id}`), addon);
+      await set(ref(db, userPath(`addons/${addon.id}`)), addon);
     } catch (error) {
       console.error("Firebase Sync Error (Add Addon):", error);
     }
@@ -472,7 +514,7 @@ const App: React.FC = () => {
 
   const handleUpdateAddon = async (addon: Addon) => {
     try {
-      await set(ref(db, `addons/${addon.id}`), addon);
+      await set(ref(db, userPath(`addons/${addon.id}`)), addon);
     } catch (error) {
       console.error("Firebase Sync Error (Update Addon):", error);
     }
@@ -480,7 +522,7 @@ const App: React.FC = () => {
 
   const handleDeleteAddon = async (id: string) => {
     try {
-      await set(ref(db, `addons/${id}`), null);
+      await set(ref(db, userPath(`addons/${id}`)), null);
     } catch (error) {
       console.error("Firebase Sync Error (Delete Addon):", error);
     }
@@ -490,7 +532,7 @@ const App: React.FC = () => {
     setTaxRate(newRate);
     localStorage.setItem('drona_tax_rate', newRate.toString());
     try {
-      await update(ref(db, 'settings'), { taxRate: newRate });
+      await update(ref(db, userPath('settings')), { taxRate: newRate });
     } catch (error) {
       console.error("Firebase Sync Error (Tax):", error);
     }
@@ -499,7 +541,7 @@ const App: React.FC = () => {
   const handleSaveRestaurantInfo = async (info: RestaurantInfo) => {
     setRestaurantInfo(info);
     try {
-      await update(ref(db, 'settings'), { restaurantInfo: info });
+      await update(ref(db, userPath('settings')), { restaurantInfo: info });
     } catch (error) {
       console.error("Firebase Sync Error (Profile):", error);
     }
@@ -509,7 +551,7 @@ const App: React.FC = () => {
     setTableCarts(newTableCarts);
     localStorage.setItem('drona_table_carts', JSON.stringify(newTableCarts));
     try {
-      await set(ref(db, 'table_carts'), newTableCarts);
+      await set(ref(db, userPath('table_carts')), newTableCarts);
     } catch (error) {
       console.error("Firebase Sync Error (Table Carts):", error);
     }
@@ -519,17 +561,17 @@ const App: React.FC = () => {
   const handleResetMenuDatabase = async () => {
     try {
       // Clear old categories and menu items from Firebase
-      await set(ref(db, 'categories'), null);
-      await set(ref(db, 'menu_items'), null);
+      await set(ref(db, userPath('categories')), null);
+      await set(ref(db, userPath('menu_items')), null);
       
       // Sync all new categories to Firebase
       for (const cat of INITIAL_CATEGORIES) {
-        await set(ref(db, `categories/${cat.id}`), cat);
+        await set(ref(db, userPath(`categories/${cat.id}`)), cat);
       }
       
       // Sync all new menu items to Firebase
       for (const item of INITIAL_MENU_ITEMS) {
-        await set(ref(db, `menu_items/${item.id}`), item);
+        await set(ref(db, userPath(`menu_items/${item.id}`)), item);
       }
       
       // Update local state
@@ -685,6 +727,23 @@ const App: React.FC = () => {
     }
   };
 
+  // Auth loading state
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#F57C00] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500 font-medium">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show auth screen if not logged in
+  if (!user) {
+    return <AuthScreen />;
+  }
+
   // Mobile Layout - triggered by /mobile URL path
   if (isMobileRoute) {
     return (
@@ -823,7 +882,7 @@ const App: React.FC = () => {
           />
 
           <div className="mt-8 border-t border-gray-700">
-            <SidebarItem icon={<LogOut size={20} />} label="Logout" onClick={() => console.log('Logout')} />
+            <SidebarItem icon={<LogOut size={20} />} label="Logout" onClick={handleLogout} />
           </div>
         </nav>
       </div>
@@ -884,8 +943,8 @@ const App: React.FC = () => {
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
             </div>
             <div className="flex items-center gap-2 pl-2 border-l ml-2">
-              <div className="w-8 h-8 bg-orange-100 text-[#F57C00] rounded-full flex items-center justify-center font-bold">A</div>
-              <span className="hidden lg:block font-black text-gray-900">Admin</span>
+              <div className="w-8 h-8 bg-orange-100 text-[#F57C00] rounded-full flex items-center justify-center font-bold">{user?.displayName?.charAt(0)?.toUpperCase() || 'A'}</div>
+              <span className="hidden lg:block font-black text-gray-900">{user?.displayName || 'Admin'}</span>
             </div>
           </div>
         </header>
