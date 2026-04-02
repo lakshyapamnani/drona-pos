@@ -874,85 +874,22 @@ const App: React.FC = () => {
       );
     }
 
-    switch (mobileTab) {
-      case 'billing':
-        return (
-          <BillingScreen 
-            categories={categories} 
-            menuItems={menuItems} 
-            taxRate={taxRate} drinkTaxRate={drinkTaxRate}
-            restaurantInfo={restaurantInfo}
-            tables={tables}
-            floors={floors}
-            tableCarts={tableCarts}
-            addons={addons}
-            onCreateOrder={handleCreateOrder}
-            onUpdateTableStatus={handleUpdateTableStatus}
-            onUpdateTableCarts={handleUpdateTableCarts}
-            variant="mobile"
-          />
-        );
-      case 'analytics':
-        return <Dashboard orders={orders} />;
-      case 'orders':
-        return (
-          <OrdersList
-            title="Live Orders"
-            orders={orders.filter(o => o.status !== 'COMPLETED' && o.status !== 'CANCELLED')}
-            onUpdateStatus={handleUpdateOrderStatus}
-            onDeleteOrder={handleDeleteOrder}
-            restaurantInfo={restaurantInfo}
-            taxRate={taxRate} drinkTaxRate={drinkTaxRate}
-            categories={categories}
-          />
-        );
-      case 'bills':
-        return (
-          <OrdersList
-            title="All Bills"
-            orders={orders}
-            onUpdateStatus={handleUpdateOrderStatus}
-            onDeleteOrder={handleDeleteOrder}
-            restaurantInfo={restaurantInfo}
-            taxRate={taxRate} drinkTaxRate={drinkTaxRate}
-            categories={categories}
-          />
-        );
-      case 'reports':
-        return <Reports orders={orders} />;
-      case 'tablesConfig':
-        return (
-          <MenuManagement
-            categories={categories}
-            menuItems={menuItems}
-            taxRate={taxRate} drinkTaxRate={drinkTaxRate}
-            restaurantInfo={restaurantInfo}
-            tables={tables}
-            floors={floors}
-            addons={addons}
-            setTaxRate={handleSaveTaxRate} setDrinkTaxRate={handleSaveDrinkTaxRate}
-            setRestaurantInfo={handleSaveRestaurantInfo}
-            onAddMenuItem={handleAddMenuItem}
-            onUpdateMenuItem={handleUpdateMenuItem}
-            onDeleteMenuItem={handleDeleteMenuItem}
-            onAddCategory={handleAddCategory}
-            onUpdateCategory={handleUpdateCategory}
-            onDeleteCategory={handleDeleteCategory}
-            onAddTable={handleAddTable}
-            onUpdateTable={handleUpdateTable}
-            onDeleteTable={handleDeleteTable}
-            onAddFloor={handleAddFloor}
-            onDeleteFloor={handleDeleteFloor}
-            onAddAddon={handleAddAddon}
-            onUpdateAddon={handleUpdateAddon}
-            onDeleteAddon={handleDeleteAddon}
-            onResetMenuDatabase={handleResetMenuDatabase}
-            initialTab="TABLES"
-          />
-        );
-      default:
-        return <Dashboard orders={orders} />;
-    }
+    return (
+      <BillingScreen 
+        categories={categories} 
+        menuItems={menuItems} 
+        taxRate={taxRate} drinkTaxRate={drinkTaxRate}
+        restaurantInfo={restaurantInfo}
+        tables={tables}
+        floors={floors}
+        tableCarts={tableCarts}
+        addons={addons}
+        onCreateOrder={handleCreateOrder}
+        onUpdateTableStatus={handleUpdateTableStatus}
+        onUpdateTableCarts={handleUpdateTableCarts}
+        variant="mobile"
+      />
+    );
   };
 
   // Auth loading state
@@ -997,48 +934,6 @@ const App: React.FC = () => {
           {renderMobileScreen()}
         </main>
 
-        {/* Bottom Navigation */}
-        <nav className="bg-white border-t shadow-lg shrink-0 safe-area-bottom">
-          <div className="flex justify-start items-center gap-3 h-16 overflow-x-auto px-3">
-            <MobileNavItem
-              icon={<LayoutGrid size={22} />}
-              label="Tables"
-              active={mobileTab === 'billing'}
-              onClick={() => setMobileTab('billing')}
-            />
-            <MobileNavItem
-              icon={<ClipboardList size={22} />}
-              label="Table Config"
-              active={mobileTab === 'tablesConfig'}
-              onClick={() => setMobileTab('tablesConfig')}
-            />
-            <MobileNavItem
-              icon={<TrendingUp size={22} />}
-              label="Analytics"
-              active={mobileTab === 'analytics'}
-              onClick={() => setMobileTab('analytics')}
-            />
-            <MobileNavItem
-              icon={<Clock size={22} />}
-              label="Orders"
-              active={mobileTab === 'orders'}
-              onClick={() => setMobileTab('orders')}
-              badge={orders.filter(o => o.status !== 'COMPLETED' && o.status !== 'CANCELLED').length}
-            />
-            <MobileNavItem
-              icon={<Receipt size={22} />}
-              label="Bills"
-              active={mobileTab === 'bills'}
-              onClick={() => setMobileTab('bills')}
-            />
-            <MobileNavItem
-              icon={<PieChart size={22} />}
-              label="Reports"
-              active={mobileTab === 'reports'}
-              onClick={() => setMobileTab('reports')}
-            />
-          </div>
-        </nav>
       </div>
     );
   }
