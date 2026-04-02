@@ -214,6 +214,8 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
   const [optionsItem, setOptionsItem] = useState<MenuItem | null>(null);
   const [menuType, setMenuType] = useState<'FOOD' | 'DRINK'>('FOOD');
+  const [mobileTab, setMobileTab] = useState<'tables' | 'menu' | 'bill'>('tables');
+  const [isCategoryCollapsed, setIsCategoryCollapsed] = useState(false);
   
   const filteredCategories = useMemo(() => {
     return categories.filter(cat => 
@@ -582,7 +584,7 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
     const selectedTable = selectedTableId ? tables.find(t => t.id === selectedTableId) : undefined;
 
     return (
-      <div className="flex flex-col h-full overflow-hidden bg-gray-100">
+      <div className="flex flex-col h-full overflow-hidden bg-gray-100 pb-16">
         {/* Item Options Popup (Veg/Non-Veg + Addons) */}
         {optionsItem && (
           <ItemOptionsPopup
@@ -593,342 +595,249 @@ const BillingScreen: React.FC<BillingScreenProps> = ({
           />
         )}
 
-        {!selectedTableId ? (
-          <>
-            <div className="bg-white border-b shadow-sm px-4 py-3 shrink-0">
-              <div className="flex items-center gap-2">
-                <Users size={20} className="text-[#F57C00]" />
-                <span className="text-sm font-black text-gray-700 uppercase tracking-wider">Tables</span>
-              </div>
+        <div className="bg-white border-b shadow-sm px-4 py-3 shrink-0">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Users size={18} className="text-[#F57C00]" />
+              <span className="text-xs font-black text-gray-700 uppercase tracking-wider">
+                {selectedTable ? `Table ${selectedTable.name}` : 'Select Table'}
+              </span>
             </div>
+            <button
+              type="button"
+              onClick={() => setIsCategoryCollapsed(!isCategoryCollapsed)}
+              className="text-xs font-bold text-gray-600 bg-gray-100 px-3 py-1 rounded-full"
+            >
+              {isCategoryCollapsed ? 'Show Categories' : 'Hide Categories'}
+            </button>
+          </div>
 
-            <TablesGrid
-              tables={tables}
-              floors={floors}
-              tableCarts={tableCarts}
-              selectedTableId={selectedTableId}
-              onSelectTable={(tableId) => {
-                setSelectedTableId(tableId);
-                setOrderType('DINE_IN');
-              }}
-            />
-          </>
-        ) : (
-          <>
-            <div className="bg-white border-b shadow-sm px-4 py-3 shrink-0">
-              <div className="flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedTableId(null);
-                    setOrderType('PICK_UP');
-                  }}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl font-black text-xs transition-all border border-gray-200 text-gray-700 hover:bg-gray-50"
-                >
-                  <ArrowLeft size={14} />
-                  Tables
-                </button>
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setMenuType('FOOD')}
+              className={`flex-1 py-2 rounded-lg font-black text-xs transition-all border ${
+                menuType === 'FOOD' ? 'bg-orange-100 text-[#F57C00] border-[#F57C00]' : 'bg-white text-gray-700 border-gray-200'
+              }`}
+            >
+              FOOD
+            </button>
+            <button
+              type="button"
+              onClick={() => setMenuType('DRINK')}
+              className={`flex-1 py-2 rounded-lg font-black text-xs transition-all border ${
+                menuType === 'DRINK' ? 'bg-orange-100 text-[#F57C00] border-[#F57C00]' : 'bg-white text-gray-700 border-gray-200'
+              }`}
+            >
+              DRINKS
+            </button>
+          </div>
+        </div>
 
-                <div className="flex-1 text-center min-w-0">
-                  <div className="text-sm font-black text-gray-900 truncate">
-                    {selectedTable?.name || 'Table'}
-                  </div>
-                  <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-0.5">
-                    Active Order
-                  </div>
-                </div>
+        <div className="flex-1 overflow-hidden">
+          {mobileTab === 'tables' && (
+            <div className="h-full overflow-y-auto">
+              <TablesGrid
+                tables={tables}
+                floors={floors}
+                tableCarts={tableCarts}
+                selectedTableId={selectedTableId}
+                onSelectTable={(tableId) => {
+                  setSelectedTableId(tableId);
+                  setOrderType('DINE_IN');
+                  setMobileTab('menu');
+                }}
+              />
+            </div>
+          )}
 
-                <div className="w-[70px]" />
-              </div>
-
-              {/* Menu Type Toggle */}
-              <div className="mt-3 flex gap-2 px-1">
-                <button
-                  type="button"
-                  onClick={() => setMenuType('FOOD')}
-                  className={`flex-1 py-2 rounded-xl font-black text-xs transition-all border ${
-                    menuType === 'FOOD' ? 'bg-orange-100 text-[#F57C00] border-[#F57C00]' : 'bg-white text-gray-700 border-gray-200 hover:border-orange-200'
-                  }`}
-                >
-                  FOOD
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMenuType('DRINK')}
-                  className={`flex-1 py-2 rounded-xl font-black text-xs transition-all border ${
-                    menuType === 'DRINK' ? 'bg-orange-100 text-[#F57C00] border-[#F57C00]' : 'bg-white text-gray-700 border-gray-200 hover:border-orange-200'
-                  }`}
-                >
-                  DRINKS
-                </button>
-              </div>
-
-              {/* Category horizontal scroller */}
-              <div className="mt-3">
-                <div className="flex overflow-x-auto custom-scrollbar gap-2 pb-1">
+          {mobileTab === 'menu' && (
+            <div className="flex h-full">
+              <div
+                className={`bg-white border-r transition-all duration-200 ${
+                  isCategoryCollapsed ? 'w-12' : 'w-28'
+                }`}
+              >
+                <div className="h-full overflow-y-auto custom-scrollbar">
                   {filteredCategories.map(cat => (
                     <button
                       key={cat.id}
                       type="button"
                       onClick={() => setSelectedCategoryId(cat.id)}
-                      className={`px-3 py-2 rounded-full font-black text-xs transition-all whitespace-nowrap border ${
+                      className={`w-full py-3 px-2 text-left border-b text-[10px] font-black uppercase tracking-tight ${
                         selectedCategoryId === cat.id
-                          ? 'bg-orange-50 border-[#F57C00] text-[#F57C00]'
-                          : 'bg-white border-gray-200 text-gray-700 hover:border-orange-200'
+                          ? 'bg-orange-50 text-[#F57C00]'
+                          : 'text-gray-600'
                       }`}
                     >
-                      {cat.name}
+                      <span className={isCategoryCollapsed ? 'block text-center' : ''}>
+                        {isCategoryCollapsed ? cat.name.slice(0, 2) : cat.name}
+                      </span>
                     </button>
                   ))}
                 </div>
               </div>
-            </div>
 
-            {/* Items + Cart */}
-            <div className="flex-1 overflow-hidden flex flex-col">
               <div className="flex-1 overflow-y-auto custom-scrollbar bg-gray-50 p-3">
-                <div className="grid grid-cols-2 gap-3">
-                  {filteredItems.map(item => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => handleAddItem(item)}
-                      className="bg-white rounded-2xl shadow-sm border-2 border-transparent hover:border-[#F57C00] hover:shadow-lg transition-all p-3 text-left relative group flex flex-col min-h-[108px]"
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        {item.vegType === 'BOTH' ? (
-                          <span
-                            className="w-4 h-4 rounded-full border-2 p-[2px]"
-                            style={{
-                              borderImage: 'linear-gradient(90deg, #16a34a 50%, #dc2626 50%) 1',
-                            }}
-                          >
-                            <div
-                              className="w-full h-full rounded-full"
-                              style={{ background: 'linear-gradient(90deg, #16a34a 50%, #dc2626 50%)' }}
-                            />
-                          </span>
-                        ) : (
-                          <span
-                            className={`w-4 h-4 rounded-full border-2 ${
-                              item.vegType === 'VEG' || item.isVeg
-                                ? 'border-green-600 p-[2px]'
-                                : 'border-red-600 p-[2px]'
-                            }`}
-                          >
-                            <div
-                              className={`w-full h-full rounded-full ${
-                                item.vegType === 'VEG' || item.isVeg ? 'bg-green-600' : 'bg-red-600'
-                              }`}
-                            />
-                          </span>
-                        )}
+                {!selectedTableId ? (
+                  <div className="h-full flex items-center justify-center text-gray-400 font-bold text-sm">
+                    Select a table to start adding items
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredItems.map(item => {
+                      const itemHasOptions = item.vegType === 'BOTH' || getCategoryAddons(item.categoryId).length > 0;
+                      const cartEntry = !itemHasOptions ? currentCart.find(ci => ci.id === item.id) : undefined;
+                      return (
+                        <div key={item.id} className="bg-white rounded-2xl border shadow-sm p-3 flex items-center gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`w-2 h-2 rounded-full ${
+                                  item.isVeg || item.vegType === 'VEG' ? 'bg-green-500' : 'bg-red-500'
+                                }`}
+                              />
+                              <h3 className="font-bold text-sm text-gray-900 truncate">{item.name}</h3>
+                            </div>
+                            {item.quantityStr && (
+                              <div className="text-[10px] text-gray-400 font-bold mt-1">
+                                {item.quantityStr}
+                              </div>
+                            )}
+                            <div className="text-xs font-black text-gray-800 mt-1">
+                              {item.vegType === 'BOTH' ? `Veg ₹${item.vegPrice} / Non-Veg ₹${item.nonVegPrice}` : `₹${item.price}`}
+                            </div>
+                          </div>
 
-                        <span className="text-[12px] font-black text-gray-900 group-hover:text-[#F57C00]">
-                          {item.vegType === 'BOTH'
-                            ? `V:₹${item.vegPrice}`
-                            : `₹${item.price}`}
-                        </span>
-                      </div>
-
-                      <h3 className="font-bold text-gray-800 text-xs line-clamp-2 flex-1">
-                        {item.name}
-                      </h3>
-
-                      <div className="mt-2 flex justify-end">
-                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 group-hover:bg-[#F57C00] group-hover:text-white transition-all shadow-sm">
-                          <Plus size={16} />
+                          {itemHasOptions ? (
+                            <button
+                              type="button"
+                              onClick={() => handleAddItem(item)}
+                              className="px-4 py-2 rounded-xl bg-green-600 text-white text-xs font-black"
+                            >
+                              ADD
+                            </button>
+                          ) : cartEntry ? (
+                            <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-2 py-1">
+                              <button
+                                onClick={() => updateQuantity(cartEntry.id, -1)}
+                                className="text-green-700"
+                              >
+                                <Minus size={14} />
+                              </button>
+                              <span className="text-sm font-black text-green-700">{cartEntry.quantity}</span>
+                              <button
+                                onClick={() => updateQuantity(cartEntry.id, 1)}
+                                className="text-green-700"
+                              >
+                                <Plus size={14} />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleAddItem(item)}
+                              className="px-4 py-2 rounded-xl border border-green-600 text-green-700 text-xs font-black"
+                            >
+                              ADD
+                            </button>
+                          )}
                         </div>
+                      );
+                    })}
+
+                    {filteredItems.length === 0 && (
+                      <div className="text-center py-10 text-gray-400 font-bold text-sm">
+                        No items in this category
                       </div>
-                    </button>
-                  ))}
-
-                  {filteredItems.length === 0 && (
-                    <div className="col-span-2 text-center py-10 text-gray-400 font-bold text-sm">
-                      No items in this category
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Cart / Checkout */}
-              <div className="w-full bg-white border-t shadow-2xl flex flex-col shrink-0 max-h-[42vh]">
-                {/* Table indicator for Dine In */}
-                {orderType === 'DINE_IN' && selectedTableId && (
-                  <div className="px-3 py-2 bg-[#F57C00] text-white text-center">
-                    <span className="font-black text-sm">
-                      {tables.find(t => t.id === selectedTableId)?.name || 'Table'} - Active Order
-                    </span>
+                    )}
                   </div>
                 )}
+              </div>
+            </div>
+          )}
 
-                <div className="flex p-3 bg-gray-100 border-b gap-1">
-                  <OrderTypeTab
-                    active={orderType === 'DINE_IN'}
-                    onClick={() => setOrderType('DINE_IN')}
-                    label="Dine In"
-                    icon={<UtensilsCrossed size={16} />}
-                  />
-                  <OrderTypeTab
-                    active={orderType === 'DELIVERY'}
-                    onClick={() => setOrderType('DELIVERY')}
-                    label="Delivery"
-                    icon={<Truck size={16} />}
-                  />
-                  <OrderTypeTab
-                    active={orderType === 'PICK_UP'}
-                    onClick={() => setOrderType('PICK_UP')}
-                    label="Pick Up"
-                    icon={<Package size={16} />}
-                  />
+          {mobileTab === 'bill' && (
+            <div className="h-full overflow-y-auto p-4">
+              {currentCart.length === 0 ? (
+                <div className="text-center py-16 text-gray-400">
+                  <ShoppingBag size={52} className="mx-auto mb-3 opacity-30" />
+                  <p className="font-bold">Cart is empty</p>
                 </div>
-
-                <div className="p-4 border-b bg-white">
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input
-                      type="text"
-                      placeholder="Customer Name / Order Note"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:ring-2 focus:ring-[#F57C00] outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
-                  {currentCart.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-40">
-                      <ShoppingBag size={64} strokeWidth={1} className="mb-3" />
-                      <p className="font-bold text-lg">No Items Added</p>
-                      {orderType === 'DINE_IN' && !selectedTableId && (
-                        <p className="text-sm mt-2">Select a table to start</p>
-                      )}
-                    </div>
-                  ) : (
-                    currentCart.map(item => (
-                      <div
-                        key={item.id}
-                        className="flex gap-3 items-center group animate-in fade-in slide-in-from-right-2 duration-200"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span
-                              className={`shrink-0 w-2 h-2 rounded-full ${
-                                item.isVeg || item.selectedVegChoice === 'VEG' ? 'bg-green-500' : 'bg-red-500'
-                              }`}
-                            />
-                            <h4 className="font-bold text-gray-800 truncate text-sm">
-                              {item.name}
-                              {item.selectedVegChoice && (
-                                <span
-                                  className={`ml-1 text-[10px] font-black ${
-                                    item.selectedVegChoice === 'VEG' ? 'text-green-600' : 'text-red-600'
-                                  }`}
-                                >
-                                  ({item.selectedVegChoice === 'VEG' ? 'V' : 'NV'})
-                                </span>
-                              )}
-                            </h4>
+              ) : (
+                <div className="space-y-3">
+                  {currentCart.map(item => (
+                    <div key={item.id} className="bg-white p-3 rounded-xl shadow-sm flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-sm text-gray-900 truncate">{item.name}</div>
+                        {item.selectedAddons && item.selectedAddons.length > 0 && (
+                          <div className="text-[10px] text-orange-600 font-bold">
+                            + {item.selectedAddons.map(a => a.name).join(', ')}
                           </div>
-                          {item.selectedAddons && item.selectedAddons.length > 0 && (
-                            <p className="text-[10px] text-orange-600 font-bold">
-                              + {item.selectedAddons.map(a => a.name).join(', ')}
-                            </p>
-                          )}
-                          <p className="text-[11px] text-gray-500 font-medium">₹{item.price} per unit</p>
-                        </div>
-
-                        <div className="flex items-center gap-2 bg-gray-50 border rounded-xl p-1 shadow-sm">
-                          <button
-                            onClick={() => updateQuantity(item.id, -1)}
-                            className="p-1 hover:text-[#F57C00] text-gray-400"
-                          >
-                            <Minus size={14} />
-                          </button>
-                          <span className="w-8 text-center font-black text-sm text-gray-900">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() => updateQuantity(item.id, 1)}
-                            className="p-1 hover:text-[#F57C00] text-gray-400"
-                          >
-                            <Plus size={14} />
-                          </button>
-                        </div>
-
-                        <div className="w-16 text-right font-black text-sm text-gray-900">
-                          ₹{item.price * item.quantity}
-                        </div>
-                        <button
-                          onClick={() => removeFromCart(item.id)}
-                          className="text-gray-200 hover:text-black transition-colors"
-                        >
-                          <Trash2 size={16} />
+                        )}
+                        <div className="text-[11px] text-gray-500 font-medium">₹{item.price} each</div>
+                      </div>
+                      <div className="flex items-center gap-2 bg-gray-50 border rounded-xl p-1">
+                        <button onClick={() => updateQuantity(item.id, -1)} className="text-gray-500">
+                          <Minus size={14} />
+                        </button>
+                        <span className="w-6 text-center font-black text-sm">{item.quantity}</span>
+                        <button onClick={() => updateQuantity(item.id, 1)} className="text-gray-500">
+                          <Plus size={14} />
                         </button>
                       </div>
-                    ))
-                  )}
-                </div>
+                    </div>
+                  ))}
 
-                <div className="p-5 border-t bg-gray-50 space-y-5 rounded-t-3xl shadow-top">
-                  <div className="space-y-1.5 text-xs font-bold uppercase tracking-wider">
-                    <div className="flex justify-between text-gray-400">
+                  <div className="bg-white p-4 rounded-xl shadow-sm">
+                    <div className="flex justify-between text-sm text-gray-600">
                       <span>Subtotal</span>
                       <span>₹{subtotal.toFixed(0)}</span>
                     </div>
-                    <div className="flex justify-between text-gray-400">
-                      <span>Tax (GST)</span>
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>Tax + VAT</span>
                       <span>₹{tax.toFixed(0)}</span>
                     </div>
-                    <div className="flex justify-between text-2xl font-black text-gray-900 border-t-2 border-dashed border-gray-200 pt-3 mt-3">
+                    <div className="flex justify-between text-lg font-black mt-2">
                       <span>Total</span>
                       <span className="text-[#F57C00]">₹{total.toFixed(0)}</span>
                     </div>
                   </div>
-
-                  <div className="flex gap-2">
-                    <PaymentTab
-                      active={paymentMode === 'CASH'}
-                      onClick={() => setPaymentMode('CASH')}
-                      icon={<Banknote size={18} />}
-                      label="Cash"
-                    />
-                    <PaymentTab
-                      active={paymentMode === 'CARD'}
-                      onClick={() => setPaymentMode('CARD')}
-                      icon={<CreditCard size={18} />}
-                      label="Card"
-                    />
-                    <PaymentTab
-                      active={paymentMode === 'UPI'}
-                      onClick={() => setPaymentMode('UPI')}
-                      icon={<Smartphone size={18} />}
-                      label="UPI"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => handlePlaceOrder(false)}
-                      className="flex items-center justify-center gap-2 bg-[#262626] text-white py-4 rounded-2xl font-black hover:bg-black transition-all active:scale-95 shadow-lg shadow-gray-200"
-                    >
-                      <ShoppingCart size={20} /> Checkout
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handlePlaceOrder(true)}
-                      className="flex items-center justify-center gap-2 bg-[#F57C00] text-white py-4 rounded-2xl font-black hover:bg-orange-600 transition-all active:scale-95 shadow-lg shadow-orange-200"
-                    >
-                      <CheckCircle size={20} /> Print & Bill
-                    </button>
-                  </div>
                 </div>
-              </div>
+              )}
             </div>
-          </>
-        )}
+          )}
+        </div>
+
+        <div className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t shadow-[0_-4px_20px_rgba(0,0,0,0.05)] flex items-center justify-around px-2 z-50">
+          <button
+            onClick={() => setMobileTab('tables')}
+            className={`flex flex-col items-center justify-center w-16 h-full gap-1 ${
+              mobileTab === 'tables' ? 'text-[#F57C00] font-bold' : 'text-gray-400'
+            }`}
+          >
+            <UtensilsCrossed size={18} />
+            <span className="text-[10px]">Tables</span>
+          </button>
+          <button
+            onClick={() => setMobileTab('menu')}
+            className={`flex flex-col items-center justify-center w-16 h-full gap-1 ${
+              mobileTab === 'menu' ? 'text-[#F57C00] font-bold' : 'text-gray-400'
+            }`}
+          >
+            <ShoppingBag size={18} />
+            <span className="text-[10px]">Menu</span>
+          </button>
+          <button
+            onClick={() => setMobileTab('bill')}
+            className={`flex flex-col items-center justify-center w-16 h-full gap-1 ${
+              mobileTab === 'bill' ? 'text-[#F57C00] font-bold' : 'text-gray-400'
+            }`}
+          >
+            <ShoppingCart size={18} />
+            <span className="text-[10px]">Bill</span>
+          </button>
+        </div>
       </div>
     );
   }
