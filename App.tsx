@@ -152,6 +152,38 @@ const App: React.FC = () => {
     };
   });
 
+  const buildRecordById = (items: Array<{ id: string }>) => {
+    return items.reduce<Record<string, unknown>>((acc, item) => {
+      if (item && item.id) {
+        acc[item.id] = item;
+      }
+      return acc;
+    }, {});
+  };
+
+  const normalizeTableCarts = (value: unknown): Record<string, { items: any[]; customerName: string }> => {
+    if (!value || typeof value !== 'object') return {};
+    const raw = value as Record<string, any>;
+    const normalized: Record<string, { items: any[]; customerName: string }> = {};
+
+    Object.entries(raw).forEach(([tableId, cart]) => {
+      const itemsRaw = cart?.items;
+      const items = Array.isArray(itemsRaw)
+        ? itemsRaw
+        : itemsRaw && typeof itemsRaw === 'object'
+          ? Object.values(itemsRaw)
+          : [];
+      const customerName = typeof cart?.customerName === 'string' ? cart.customerName : '';
+      normalized[tableId] = { items, customerName };
+    });
+
+    return normalized;
+  };
+
+  const sanitizeForFirebase = <T,>(value: T): T => {
+    return JSON.parse(JSON.stringify(value));
+  };
+
   // Connectivity and Route Listener
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -203,9 +235,8 @@ const App: React.FC = () => {
     }
   };
 
-  // Helper to get user-scoped Firebase path (fallback to public space when no auth)
-  const userId = user?.uid || 'public';
-  const userPath = (path: string) => `users/${userId}/${path}`;
+  // Helper to get shared Firebase path (auth removed)
+  const userPath = (path: string) => `users/public/${path}`;
 
   const markOnboardingDone = async () => {
     try {
@@ -271,7 +302,7 @@ const App: React.FC = () => {
     };
 
     initializeDatabase();
-  }, [userId]);
+  }, []);
 
   // Firebase Real-time Listeners
   useEffect(() => {
@@ -285,6 +316,15 @@ const App: React.FC = () => {
         setCategories(catArray);
         localStorage.setItem('drona_categories', JSON.stringify(catArray));
       } else {
+        const saved = localStorage.getItem('drona_categories');
+        if (saved) {
+          const catArray = JSON.parse(saved) as Category[];
+          if (catArray.length > 0) {
+            set(ref(db, userPath('categories')), buildRecordById(catArray));
+            setCategories(catArray);
+            return;
+          }
+        }
         setCategories([]);
         localStorage.setItem('drona_categories', JSON.stringify([]));
       }
@@ -301,6 +341,15 @@ const App: React.FC = () => {
         setMenuItems(itemArray);
         localStorage.setItem('drona_menu_items', JSON.stringify(itemArray));
       } else {
+        const saved = localStorage.getItem('drona_menu_items');
+        if (saved) {
+          const itemArray = JSON.parse(saved) as MenuItem[];
+          if (itemArray.length > 0) {
+            set(ref(db, userPath('menu_items')), buildRecordById(itemArray));
+            setMenuItems(itemArray);
+            return;
+          }
+        }
         setMenuItems([]);
         localStorage.setItem('drona_menu_items', JSON.stringify([]));
       }
@@ -350,6 +399,15 @@ const App: React.FC = () => {
         setTables(tableArray);
         localStorage.setItem('drona_tables', JSON.stringify(tableArray));
       } else {
+        const saved = localStorage.getItem('drona_tables');
+        if (saved) {
+          const tableArray = JSON.parse(saved) as Table[];
+          if (tableArray.length > 0) {
+            set(ref(db, userPath('tables')), buildRecordById(tableArray));
+            setTables(tableArray);
+            return;
+          }
+        }
         setTables([]);
         localStorage.setItem('drona_tables', JSON.stringify([]));
       }
@@ -364,6 +422,15 @@ const App: React.FC = () => {
         setAddons(addonArray);
         localStorage.setItem('drona_addons', JSON.stringify(addonArray));
       } else {
+        const saved = localStorage.getItem('drona_addons');
+        if (saved) {
+          const addonArray = JSON.parse(saved) as Addon[];
+          if (addonArray.length > 0) {
+            set(ref(db, userPath('addons')), buildRecordById(addonArray));
+            setAddons(addonArray);
+            return;
+          }
+        }
         setAddons([]);
         localStorage.setItem('drona_addons', JSON.stringify([]));
       }
@@ -377,6 +444,15 @@ const App: React.FC = () => {
         setFloors(floorArray);
         localStorage.setItem('drona_floors', JSON.stringify(floorArray));
       } else {
+        const saved = localStorage.getItem('drona_floors');
+        if (saved) {
+          const floorArray = JSON.parse(saved) as Floor[];
+          if (floorArray.length > 0) {
+            set(ref(db, userPath('floors')), buildRecordById(floorArray));
+            setFloors(floorArray);
+            return;
+          }
+        }
         setFloors([]);
         localStorage.setItem('drona_floors', JSON.stringify([]));
       }
@@ -387,9 +463,26 @@ const App: React.FC = () => {
     const unsubscribeTableCarts = onValue(tableCartsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        setTableCarts(data);
-        localStorage.setItem('drona_table_carts', JSON.stringify(data));
+        const normalized = normalizeTableCarts(data);
+        setTableCarts(normalized);
+        localStorage.setItem('drona_table_carts', JSON.stringify(normalized));
+
+        // Auto-repair malformed cart shapes in RTDB to keep all clients in sync.
+        if (JSON.stringify(data) !== JSON.stringify(normalized)) {
+          set(ref(db, userPath('table_carts')), sanitizeForFirebase(normalized)).catch((error) => {
+            console.error('Firebase Sync Error (Repair Table Carts):', error);
+          });
+        }
       } else {
+        const saved = localStorage.getItem('drona_table_carts');
+        if (saved) {
+          const carts = normalizeTableCarts(JSON.parse(saved));
+          if (Object.keys(carts).length > 0) {
+            set(ref(db, userPath('table_carts')), carts);
+            setTableCarts(carts);
+            return;
+          }
+        }
         setTableCarts({});
         localStorage.setItem('drona_table_carts', JSON.stringify({}));
       }
@@ -405,7 +498,7 @@ const App: React.FC = () => {
       unsubscribeFloors();
       unsubscribeTableCarts();
     };
-  }, [userId]);
+  }, []);
 
   // Action Handlers - Firebase is the single source of truth for orders
   const handleCreateOrder = async (order: Order) => {
@@ -694,10 +787,13 @@ const App: React.FC = () => {
   };
 
   const handleUpdateTableCarts = async (newTableCarts: Record<string, { items: any[]; customerName: string }>) => {
-    setTableCarts(newTableCarts);
-    localStorage.setItem('drona_table_carts', JSON.stringify(newTableCarts));
+    const normalized = normalizeTableCarts(newTableCarts);
+    const cleanTableCarts = sanitizeForFirebase(normalized);
+
+    setTableCarts(cleanTableCarts);
+    localStorage.setItem('drona_table_carts', JSON.stringify(cleanTableCarts));
     try {
-      await set(ref(db, userPath('table_carts')), newTableCarts);
+      await set(ref(db, userPath('table_carts')), cleanTableCarts);
     } catch (error) {
       console.error("Firebase Sync Error (Table Carts):", error);
     }
