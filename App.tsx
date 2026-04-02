@@ -203,11 +203,11 @@ const App: React.FC = () => {
     }
   };
 
-  // Helper to get user-scoped Firebase path
-  const userPath = (path: string) => `users/${user?.uid}/${path}`;
+  // Helper to get user-scoped Firebase path (fallback to public space when no auth)
+  const userId = user?.uid || 'public';
+  const userPath = (path: string) => `users/${userId}/${path}`;
 
   const markOnboardingDone = async () => {
-    if (!user) return;
     try {
       await set(ref(db, userPath('meta/onboardingCompleted')), true);
     } catch (error) {
@@ -239,7 +239,6 @@ const App: React.FC = () => {
 
   // Initialize user settings if empty (do not auto-seed menu/category sample data)
   useEffect(() => {
-    if (!user) return;
     const initializeDatabase = async () => {
       try {
         const settingsRef = ref(db, userPath('settings'));
@@ -250,7 +249,7 @@ const App: React.FC = () => {
             const savedDrinkTax = localStorage.getItem('drona_drink_tax_rate');
             const drinkTaxRateVal = savedDrinkTax ? parseFloat(savedDrinkTax) : 0;
             const restaurantVal = { 
-              name: user.displayName || 'DRONA POS CAFE', 
+              name: user?.displayName || 'DRONA POS CAFE', 
               phone: '+91 9876543210', 
               address: '123 Main Street, Food Park, City' 
             };
@@ -272,14 +271,10 @@ const App: React.FC = () => {
     };
 
     initializeDatabase();
-  }, [user]);
+  }, [userId]);
 
   // Firebase Real-time Listeners
   useEffect(() => {
-    if (!user) {
-      setIsDataLoaded(false);
-      return;
-    }
 
     // Categories Sync
     const categoriesRef = ref(db, userPath('categories'));
@@ -410,7 +405,7 @@ const App: React.FC = () => {
       unsubscribeFloors();
       unsubscribeTableCarts();
     };
-  }, [user]);
+  }, [userId]);
 
   // Action Handlers - Firebase is the single source of truth for orders
   const handleCreateOrder = async (order: Order) => {
